@@ -358,12 +358,54 @@ const AdminPanel = () => {
                 <div className="flex items-center justify-between mb-3">
                   <div>
                     <p className="font-medium text-foreground">{app.vehicle_model} · {app.vehicle_plate}</p>
-                    <p className="text-sm text-muted-foreground">License: {app.license_number} · {app.experience_years} yrs exp</p>
-                    <p className="text-xs text-muted-foreground">Year: {app.vehicle_year}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {app.phone && <>{lang === 'ar' ? 'الهاتف' : 'Phone'}: {app.phone} · </>}
+                      {lang === 'ar' ? 'الخبرة' : 'Experience'}: {app.experience_years} {lang === 'ar' ? 'سنة' : 'yrs'}
+                    </p>
+                    {app.was_uber_driver && (
+                      <span className="inline-block text-xs bg-secondary/20 text-secondary px-2 py-0.5 rounded-full mt-1 font-medium">
+                        {lang === 'ar' ? '⚡ سائق أوبر/كريم سابق' : '⚡ Former Uber/Careem driver'}
+                      </span>
+                    )}
                   </div>
                   <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${statusColors[app.status]}`}>{app.status}</span>
                 </div>
+
                 {app.notes && <p className="text-sm text-muted-foreground mb-3">{app.notes}</p>}
+
+                {/* Document previews */}
+                {(app.id_front_url || app.id_back_url || app.driving_license_url || app.car_license_url || app.criminal_record_url) && (
+                  <div className="mb-4">
+                    <p className="text-xs font-semibold text-muted-foreground mb-2">
+                      {lang === 'ar' ? 'المستندات المرفقة:' : 'Uploaded Documents:'}
+                    </p>
+                    <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                      {[
+                        { url: app.id_front_url, label: lang === 'ar' ? 'بطاقة أمام' : 'ID Front' },
+                        { url: app.id_back_url, label: lang === 'ar' ? 'بطاقة خلف' : 'ID Back' },
+                        { url: app.driving_license_url, label: lang === 'ar' ? 'رخصة قيادة' : 'License' },
+                        { url: app.car_license_url, label: lang === 'ar' ? 'رخصة سيارة' : 'Car License' },
+                        { url: app.criminal_record_url, label: lang === 'ar' ? 'فيش' : 'Criminal Rec.' },
+                      ].filter(d => d.url).map((doc, i) => (
+                        <a key={i} href={doc.url} target="_blank" rel="noopener noreferrer"
+                          className="block border border-border rounded-lg overflow-hidden hover:border-primary transition-colors group">
+                          <img src={doc.url} alt={doc.label} className="w-full h-16 object-cover" />
+                          <p className="text-[10px] text-muted-foreground text-center py-1 group-hover:text-primary">{doc.label}</p>
+                        </a>
+                      ))}
+                    </div>
+                    {app.uber_proof_url && (
+                      <div className="mt-2">
+                        <a href={app.uber_proof_url} target="_blank" rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-xs text-secondary hover:underline">
+                          <Eye className="w-3 h-3" />
+                          {lang === 'ar' ? 'عرض إثبات أوبر/كريم' : 'View Uber/Careem proof'}
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {app.status === 'pending' && (
                   <div className="flex gap-2">
                     <Button size="sm" onClick={() => handleApplication(app.id, 'approved')}>
