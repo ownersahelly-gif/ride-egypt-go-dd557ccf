@@ -457,31 +457,46 @@ const BookRide = () => {
             )}
 
             {customPoint && result && (
-              <div className={`flex items-center gap-2 text-sm p-3 rounded-lg ${
-                result.ok ? 'bg-green-50 text-green-700' : 'bg-destructive/10 text-destructive'
-              }`}>
-                {result.ok ? (
-                  <>
-                    <CheckCircle2 className="w-4 h-4" />
-                    <div>
-                      <p className="font-medium">{customPoint.name}</p>
-                      <p className="text-xs">
-                        {result.onRoute
-                          ? (lang === 'ar' ? 'على المسار مباشرة ✓' : 'Directly on route ✓')
-                          : (lang === 'ar' ? `+${result.minutes} دقيقة إنحراف ✓` : `+${result.minutes} min deviation ✓`)}
-                      </p>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <XCircle className="w-4 h-4" />
-                    <div>
-                      <p className="font-medium">{lang === 'ar' ? 'موقع بعيد جداً' : 'Too far from route'}</p>
-                      <p className="text-xs">
-                        {lang === 'ar' ? `+${result.minutes} دقيقة (الحد 5 دقائق)` : `+${result.minutes} min (max 5 min)`}
-                      </p>
-                    </div>
-                  </>
+              <div className="space-y-2">
+                <div className={`flex items-center gap-2 text-sm p-3 rounded-lg ${
+                  result.ok ? 'bg-green-50 text-green-700' : 'bg-destructive/10 text-destructive'
+                }`}>
+                  {result.ok ? (
+                    <>
+                      <CheckCircle2 className="w-4 h-4" />
+                      <div>
+                        <p className="font-medium">{customPoint.name}</p>
+                        <p className="text-xs">
+                          {result.onRoute
+                            ? (lang === 'ar' ? 'على المسار مباشرة ✓' : 'Directly on route ✓')
+                            : (lang === 'ar' ? `+${result.minutes} دقيقة إنحراف ✓` : `+${result.minutes} min deviation ✓`)}
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <XCircle className="w-4 h-4" />
+                      <div>
+                        <p className="font-medium">{lang === 'ar' ? 'موقع بعيد جداً' : 'Too far from route'}</p>
+                        <p className="text-xs">
+                          {lang === 'ar' ? `+${result.minutes} دقيقة (الحد 5 دقائق)` : `+${result.minutes} min (max 5 min)`}
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </div>
+                {result.ok && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full gap-2"
+                    onClick={() => {
+                      window.open(`https://www.google.com/maps/dir/?api=1&destination=${customPoint.lat},${customPoint.lng}&travelmode=driving`, '_blank');
+                    }}
+                  >
+                    <Navigation className="w-4 h-4" />
+                    {lang === 'ar' ? 'فتح في خرائط جوجل' : 'Open in Google Maps'}
+                  </Button>
                 )}
               </div>
             )}
