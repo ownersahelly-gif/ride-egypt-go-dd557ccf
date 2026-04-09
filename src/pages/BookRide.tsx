@@ -773,18 +773,79 @@ const BookRide = () => {
             {/* Dropoff */}
             {renderPointSelector('dropoff', dropoffMode, setDropoffMode, customDropoff, validatingDropoff, dropoffResult)}
 
+            {/* InstaPay Payment */}
+            <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
+              <h3 className="font-semibold text-foreground flex items-center gap-2">
+                <ImageIcon className="w-4 h-4 text-primary" />
+                {lang === 'ar' ? 'الدفع عبر InstaPay' : 'Pay via InstaPay'}
+              </h3>
+              <div className="bg-surface rounded-xl p-4 text-sm text-muted-foreground space-y-2">
+                <p>{lang === 'ar' ? 'حوّل المبلغ عبر InstaPay ثم ارفع لقطة شاشة للتحويل:' : 'Transfer the amount via InstaPay then upload a screenshot:'}</p>
+                <p className="font-bold text-foreground text-lg">{selectedRide.routes?.price} EGP</p>
+                <p className="text-xs">{lang === 'ar' ? 'سيتم مراجعة الدفع من قبل المسؤول' : 'Payment will be reviewed by admin'}</p>
+              </div>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handlePaymentFile}
+              />
+
+              {paymentPreview ? (
+                <div className="space-y-2">
+                  <img src={paymentPreview} alt="Payment proof" className="w-full h-48 object-contain rounded-lg border border-border bg-muted" />
+                  <Button variant="outline" size="sm" className="w-full" onClick={() => fileInputRef.current?.click()}>
+                    <Upload className="w-4 h-4 me-1" />
+                    {lang === 'ar' ? 'تغيير الصورة' : 'Change Image'}
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  variant="outline"
+                  className="w-full h-24 border-dashed border-2 flex-col gap-2"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Upload className="w-6 h-6 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">
+                    {lang === 'ar' ? 'ارفع لقطة شاشة InstaPay' : 'Upload InstaPay Screenshot'}
+                  </span>
+                </Button>
+              )}
+            </div>
+
             {/* Summary & Book */}
             <div className="bg-card border border-border rounded-2xl p-5">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm text-muted-foreground">{lang === 'ar' ? 'مقعد واحد' : '1 Seat'}</span>
                 <span className="text-lg font-bold text-primary">{selectedRide.routes?.price} EGP</span>
               </div>
-              <Button className="w-full mt-3" size="lg" onClick={handleBook}
-                disabled={loading || selectedRide.available_seats === 0 || !isPickupValid || !isDropoffValid}>
-                {loading ? t('auth.loading') : (selectedRide.available_seats === 0
-                  ? (lang === 'ar' ? 'مكتمل' : 'Full')
-                  : t('booking.confirm'))}
-              </Button>
+
+              {!isRideFull ? (
+                <Button className="w-full mt-3" size="lg" onClick={() => handleBook(false)}
+                  disabled={loading || !isPickupValid || !isDropoffValid || !paymentProof}>
+                  {loading ? (
+                    <><Loader2 className="w-4 h-4 me-1 animate-spin" />{lang === 'ar' ? 'جاري الحجز...' : 'Booking...'}</>
+                  ) : (
+                    lang === 'ar' ? 'تأكيد الحجز' : 'Confirm Booking'
+                  )}
+                </Button>
+              ) : (
+                <div className="space-y-3 mt-3">
+                  <div className="flex items-center gap-2 text-sm text-destructive font-medium p-2 bg-destructive/10 rounded-lg">
+                    <AlertCircle className="w-4 h-4" />
+                    {lang === 'ar' ? 'الرحلة مكتملة العدد' : 'This ride is full'}
+                  </div>
+                  <Button className="w-full" size="lg" variant="secondary" onClick={() => handleBook(true)}
+                    disabled={loading || !isPickupValid || !isDropoffValid}>
+                    <ListOrdered className="w-4 h-4 me-1" />
+                    {loading
+                      ? (lang === 'ar' ? 'جاري التسجيل...' : 'Joining...')
+                      : (lang === 'ar' ? 'الانضمام لقائمة الانتظار' : 'Join Waitlist')}
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         )}
