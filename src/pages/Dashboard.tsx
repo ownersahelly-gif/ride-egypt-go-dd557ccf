@@ -30,7 +30,12 @@ const Dashboard = () => {
       setBookings(bookingsData || []);
       const roles = (rolesData || []).map(r => r.role);
       setIsAdmin(roles.includes('admin'));
-      setIsDriver(profileData?.user_type === 'driver' || roles.includes('moderator'));
+      const driverFlag = profileData?.user_type === 'driver' || roles.includes('moderator');
+      setIsDriver(driverFlag);
+      if (driverFlag) {
+        navigate('/driver-dashboard');
+        return;
+      }
 
       // Fetch driver profiles for bookings
       const driverIds = [...new Set((bookingsData || []).map((b: any) => b.shuttles?.driver_id).filter(Boolean))];
