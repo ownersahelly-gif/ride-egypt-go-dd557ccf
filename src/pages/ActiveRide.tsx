@@ -46,12 +46,16 @@ const ActiveRide = () => {
       const today = new Date().toISOString().split('T')[0];
       const { data: bookingsData } = await supabase
         .from('bookings')
-        .select('*, stops!bookings_pickup_stop_id_fkey(name_en, name_ar, lat, lng), dropoff:stops!bookings_dropoff_stop_id_fkey(name_en, name_ar, lat, lng)')
+        .select('*, stops!bookings_pickup_stop_id_fkey(name_en, name_ar, lat, lng, stop_order), dropoff:stops!bookings_dropoff_stop_id_fkey(name_en, name_ar, lat, lng, stop_order)')
         .eq('shuttle_id', shuttleData.id)
         .eq('scheduled_date', today)
         .in('status', ['confirmed', 'boarded']);
 
-      const bks = bookingsData || [];
+      const bks = (bookingsData || []).sort((a: any, b: any) => {
+        const orderA = a.stops?.stop_order ?? 999;
+        const orderB = b.stops?.stop_order ?? 999;
+        return orderA - orderB;
+      });
       setBookings(bks);
 
       // Determine phase
@@ -135,7 +139,10 @@ const ActiveRide = () => {
     markers.push({ lat: route.destination_lat, lng: route.destination_lng, label: 'E', color: 'red' });
   }
   
-  const activeBookings = bookings.filter(b => b.status !== 'completed');
+  const activeBookings = bookings.filter(b => b.status !== 'completed').sort((a: any, b: any) => {
+    if (phase === 'pickup') return (a.stops?.stop_order ?? 999) - (b.stops?.stop_order ?? 999);
+    return (a.dropoff?.stop_order ?? 999) - (b.dropoff?.stop_order ?? 999);
+  });
   activeBookings.forEach((b, i) => {
     if (phase === 'pickup' && b.status === 'confirmed' && b.stops?.lat) {
       markers.push({ lat: b.stops.lat, lng: b.stops.lng, label: `P${i + 1}`, color: 'green' });
