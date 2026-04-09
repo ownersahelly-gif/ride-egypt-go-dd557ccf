@@ -158,7 +158,7 @@ const BookRide = () => {
 
   // Fetch route directions when ride is selected (for on-route checking)
   useEffect(() => {
-    if (!selectedRide?.routes || typeof google === 'undefined') { setRouteDirections(null); return; }
+    if (!selectedRide?.routes || typeof google === 'undefined' || !google?.maps?.DirectionsService) { setRouteDirections(null); return; }
     const ds = new google.maps.DirectionsService();
     ds.route({
       origin: { lat: selectedRide.routes.origin_lat, lng: selectedRide.routes.origin_lng },
