@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import PlacesAutocomplete from '@/components/PlacesAutocomplete';
 
 const RequestRoute = () => {
   const { user } = useAuth();
@@ -16,24 +17,24 @@ const RequestRoute = () => {
   const { toast } = useToast();
   const Back = lang === 'ar' ? ChevronRight : ChevronLeft;
 
-  const [originName, setOriginName] = useState('');
-  const [destName, setDestName] = useState('');
+  const [origin, setOrigin] = useState({ name: '', lat: 30.0444, lng: 31.2357 });
+  const [destination, setDestination] = useState({ name: '', lat: 30.0131, lng: 31.2089 });
   const [preferredTime, setPreferredTime] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user || !origin.name || !destination.name) return;
     setLoading(true);
     try {
       const { error } = await supabase.from('route_requests').insert({
         user_id: user.id,
-        origin_name: originName,
-        origin_lat: 30.0444, // Default Cairo coords — would use Maps API
-        origin_lng: 31.2357,
-        destination_name: destName,
-        destination_lat: 30.0131,
-        destination_lng: 31.2089,
+        origin_name: origin.name,
+        origin_lat: origin.lat,
+        origin_lng: origin.lng,
+        destination_name: destination.name,
+        destination_lat: destination.lat,
+        destination_lng: destination.lng,
         preferred_time: preferredTime || null,
       });
       if (error) throw error;
@@ -59,20 +60,20 @@ const RequestRoute = () => {
         <form onSubmit={handleSubmit} className="bg-card rounded-2xl border border-border p-6 space-y-5">
           <div className="space-y-2">
             <Label>{t('routeRequest.origin')}</Label>
-            <div className="relative">
-              <MapPin className="absolute start-3 top-3 h-4 w-4 text-green-500" />
-              <Input className="ps-10" placeholder={t('routeRequest.originPlaceholder')}
-                value={originName} onChange={(e) => setOriginName(e.target.value)} required />
-            </div>
+            <PlacesAutocomplete
+              placeholder={t('routeRequest.originPlaceholder')}
+              iconColor="text-green-500"
+              onSelect={(place) => setOrigin(place)}
+            />
           </div>
 
           <div className="space-y-2">
             <Label>{t('routeRequest.destination')}</Label>
-            <div className="relative">
-              <MapPin className="absolute start-3 top-3 h-4 w-4 text-destructive" />
-              <Input className="ps-10" placeholder={t('routeRequest.destPlaceholder')}
-                value={destName} onChange={(e) => setDestName(e.target.value)} required />
-            </div>
+            <PlacesAutocomplete
+              placeholder={t('routeRequest.destPlaceholder')}
+              iconColor="text-destructive"
+              onSelect={(place) => setDestination(place)}
+            />
           </div>
 
           <div className="space-y-2">
@@ -80,7 +81,7 @@ const RequestRoute = () => {
             <Input type="time" value={preferredTime} onChange={(e) => setPreferredTime(e.target.value)} />
           </div>
 
-          <Button type="submit" className="w-full" size="lg" disabled={loading}>
+          <Button type="submit" className="w-full" size="lg" disabled={loading || !origin.name || !destination.name}>
             {loading ? t('auth.loading') : t('routeRequest.submit')}
           </Button>
         </form>

@@ -15,6 +15,8 @@ import MyBookings from "./pages/MyBookings.tsx";
 import RequestRoute from "./pages/RequestRoute.tsx";
 import Profile from "./pages/Profile.tsx";
 import DriverApply from "./pages/DriverApply.tsx";
+import DriverDashboard from "./pages/DriverDashboard.tsx";
+import TrackShuttle from "./pages/TrackShuttle.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -37,6 +39,8 @@ const App = () => (
               <Route path="/request-route" element={<ProtectedRoute><RequestRoute /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="/driver-apply" element={<ProtectedRoute><DriverApply /></ProtectedRoute>} />
+              <Route path="/driver-dashboard" element={<ProtectedRoute><DriverDashboard /></ProtectedRoute>} />
+              <Route path="/track" element={<ProtectedRoute><TrackShuttle /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
