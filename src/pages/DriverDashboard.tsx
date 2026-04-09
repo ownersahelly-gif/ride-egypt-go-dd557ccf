@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Globe, LogOut, User, MapPin, Clock, Users, Car, Calendar, DollarSign, Navigation, CheckCircle2, XCircle, Loader2, Play } from 'lucide-react';
+import { useDriverBookingNotifications } from '@/hooks/useBookingNotifications';
 
 type TabType = 'overview' | 'trips' | 'schedule' | 'shuttle';
 
@@ -23,6 +24,8 @@ const DriverDashboard = () => {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+
+  useDriverBookingNotifications(shuttle?.id || null);
 
   useEffect(() => {
     if (!user) return;

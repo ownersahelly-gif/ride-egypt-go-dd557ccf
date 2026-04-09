@@ -18,6 +18,7 @@ import DriverApply from "./pages/DriverApply.tsx";
 import DriverDashboard from "./pages/DriverDashboard.tsx";
 import TrackShuttle from "./pages/TrackShuttle.tsx";
 import ActiveRide from "./pages/ActiveRide.tsx";
+import AdminPanel from "./pages/AdminPanel.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -43,6 +44,8 @@ const App = () => (
               <Route path="/driver-dashboard" element={<ProtectedRoute><DriverDashboard /></ProtectedRoute>} />
               <Route path="/track" element={<ProtectedRoute><TrackShuttle /></ProtectedRoute>} />
               <Route path="/active-ride" element={<ProtectedRoute><ActiveRide /></ProtectedRoute>} />
+              <Route path="/admin" element={<ProtectedRoute><AdminPanel /></ProtectedRoute>} />
+              <Route path="*" element={<NotFound />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
