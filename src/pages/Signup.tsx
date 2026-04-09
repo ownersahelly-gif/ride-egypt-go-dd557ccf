@@ -224,7 +224,7 @@ const Signup = () => {
         });
       }
 
-      navigate('/dashboard');
+      navigate(role === 'driver' ? '/driver-dashboard' : '/dashboard');
     } catch (error: any) {
       toast({ title: t('auth.error'), description: error.message, variant: 'destructive' });
     } finally {
