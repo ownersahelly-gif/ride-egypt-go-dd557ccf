@@ -37,6 +37,7 @@ const TrackShuttle = () => {
   const [shuttle, setShuttle] = useState<any>(null);
   const [route, setRoute] = useState<any>(null);
   const [driver, setDriver] = useState<any>(null);
+  const [driverApplication, setDriverApplication] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isLive, setIsLive] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
