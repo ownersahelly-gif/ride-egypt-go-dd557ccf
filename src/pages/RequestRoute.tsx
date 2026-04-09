@@ -7,8 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MapPin, Navigation } from 'lucide-react';
 import PlacesAutocomplete from '@/components/PlacesAutocomplete';
+import MapView from '@/components/MapView';
+
+type Location = { name: string; lat: number; lng: number };
 
 const RequestRoute = () => {
   const { user } = useAuth();
@@ -17,10 +20,21 @@ const RequestRoute = () => {
   const { toast } = useToast();
   const Back = lang === 'ar' ? ChevronRight : ChevronLeft;
 
-  const [origin, setOrigin] = useState({ name: '', lat: 30.0444, lng: 31.2357 });
-  const [destination, setDestination] = useState({ name: '', lat: 30.0131, lng: 31.2089 });
+  const [origin, setOrigin] = useState<Location>({ name: '', lat: 0, lng: 0 });
+  const [destination, setDestination] = useState<Location>({ name: '', lat: 0, lng: 0 });
   const [preferredTime, setPreferredTime] = useState('');
   const [loading, setLoading] = useState(false);
+  const [activePin, setActivePin] = useState<'origin' | 'destination' | null>(null);
+
+  const handleMapClick = (lat: number, lng: number) => {
+    if (!activePin) return;
+    const label = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+    if (activePin === 'origin') {
+      setOrigin({ name: label, lat, lng });
+    } else {
+      setDestination({ name: label, lat, lng });
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,6 +61,15 @@ const RequestRoute = () => {
     }
   };
 
+  const markers = [
+    ...(origin.lat ? [{ lat: origin.lat, lng: origin.lng, label: 'A', color: 'green' as const }] : []),
+    ...(destination.lat ? [{ lat: destination.lat, lng: destination.lng, label: 'B', color: 'red' as const }] : []),
+  ];
+
+  const mapCenter = origin.lat ? { lat: origin.lat, lng: origin.lng }
+    : destination.lat ? { lat: destination.lat, lng: destination.lng }
+    : undefined;
+
   return (
     <div className="min-h-screen bg-surface">
       <header className="bg-card border-b border-border sticky top-0 z-40">
@@ -56,24 +79,85 @@ const RequestRoute = () => {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 max-w-lg">
+      <main className="container mx-auto px-4 py-8 max-w-2xl space-y-6">
+        {/* Map */}
+        <div className="bg-card rounded-2xl border border-border overflow-hidden">
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
+            <MapPin className="w-4 h-4 text-primary" />
+            <p className="text-sm text-muted-foreground">
+              {activePin === 'origin'
+                ? (lang === 'ar' ? 'انقر على الخريطة لتحديد نقطة الانطلاق' : 'Click the map to set pickup location')
+                : activePin === 'destination'
+                ? (lang === 'ar' ? 'انقر على الخريطة لتحديد نقطة الوصول' : 'Click the map to set drop-off location')
+                : (lang === 'ar' ? 'اختر زر "تحديد على الخريطة" أدناه أو ابحث بالنص' : 'Use "Pick on map" buttons below, or search by text')}
+            </p>
+          </div>
+          <MapView
+            className="h-[350px]"
+            markers={markers}
+            center={mapCenter}
+            zoom={13}
+            onMapClick={handleMapClick}
+            origin={origin.lat && destination.lat ? origin : undefined}
+            destination={origin.lat && destination.lat ? destination : undefined}
+            showDirections={!!(origin.lat && destination.lat)}
+          />
+        </div>
+
+        {/* Form */}
         <form onSubmit={handleSubmit} className="bg-card rounded-2xl border border-border p-6 space-y-5">
           <div className="space-y-2">
-            <Label>{t('routeRequest.origin')}</Label>
-            <PlacesAutocomplete
-              placeholder={t('routeRequest.originPlaceholder')}
-              iconColor="text-green-500"
-              onSelect={(place) => setOrigin(place)}
-            />
+            <Label className="flex items-center gap-2">
+              <Navigation className="w-4 h-4 text-green-500" />
+              {t('routeRequest.origin')}
+            </Label>
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <PlacesAutocomplete
+                  placeholder={t('routeRequest.originPlaceholder')}
+                  value={origin.name}
+                  iconColor="text-green-500"
+                  onSelect={(place) => { setOrigin(place); setActivePin(null); }}
+                />
+              </div>
+              <Button
+                type="button"
+                variant={activePin === 'origin' ? 'default' : 'outline'}
+                size="sm"
+                className="shrink-0 mt-0"
+                onClick={() => setActivePin(activePin === 'origin' ? null : 'origin')}
+              >
+                <MapPin className="w-4 h-4 me-1" />
+                {lang === 'ar' ? 'الخريطة' : 'Map'}
+              </Button>
+            </div>
           </div>
 
           <div className="space-y-2">
-            <Label>{t('routeRequest.destination')}</Label>
-            <PlacesAutocomplete
-              placeholder={t('routeRequest.destPlaceholder')}
-              iconColor="text-destructive"
-              onSelect={(place) => setDestination(place)}
-            />
+            <Label className="flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-destructive" />
+              {t('routeRequest.destination')}
+            </Label>
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <PlacesAutocomplete
+                  placeholder={t('routeRequest.destPlaceholder')}
+                  value={destination.name}
+                  iconColor="text-destructive"
+                  onSelect={(place) => { setDestination(place); setActivePin(null); }}
+                />
+              </div>
+              <Button
+                type="button"
+                variant={activePin === 'destination' ? 'default' : 'outline'}
+                size="sm"
+                className="shrink-0 mt-0"
+                onClick={() => setActivePin(activePin === 'destination' ? null : 'destination')}
+              >
+                <MapPin className="w-4 h-4 me-1" />
+                {lang === 'ar' ? 'الخريطة' : 'Map'}
+              </Button>
+            </div>
           </div>
 
           <div className="space-y-2">
