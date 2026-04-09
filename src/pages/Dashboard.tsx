@@ -5,8 +5,10 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { MapPin, Clock, Ticket, Plus, LogOut, Globe, User, Navigation } from 'lucide-react';
+import { useBookingNotifications } from '@/hooks/useBookingNotifications';
 
 const Dashboard = () => {
+  useBookingNotifications();
   const { user, signOut } = useAuth();
   const { t, lang, setLang } = useLanguage();
   const navigate = useNavigate();
