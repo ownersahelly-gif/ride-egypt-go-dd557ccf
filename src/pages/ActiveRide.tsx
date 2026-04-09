@@ -144,8 +144,13 @@ const ActiveRide = () => {
     return (a.dropoff?.stop_order ?? 999) - (b.dropoff?.stop_order ?? 999);
   });
   activeBookings.forEach((b, i) => {
-    if (phase === 'pickup' && b.status === 'confirmed' && b.stops?.lat) {
-      markers.push({ lat: b.stops.lat, lng: b.stops.lng, label: `P${i + 1}`, color: 'green' });
+    if (phase === 'pickup' && b.status === 'confirmed') {
+      // Use custom pickup if available, otherwise use stop
+      const lat = b.custom_pickup_lat || b.stops?.lat;
+      const lng = b.custom_pickup_lng || b.stops?.lng;
+      if (lat && lng) {
+        markers.push({ lat, lng, label: `P${i + 1}`, color: 'green' });
+      }
     }
     if ((phase === 'dropoff' || b.status === 'boarded') && b.dropoff?.lat) {
       markers.push({ lat: b.dropoff.lat, lng: b.dropoff.lng, label: `D${i + 1}`, color: 'red' });
