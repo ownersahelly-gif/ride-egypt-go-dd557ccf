@@ -296,13 +296,15 @@ const BookRide = () => {
         bookingData.custom_pickup_name = customPickup.name;
       }
 
-      // Dropoff — store in custom fields too for consistency
+      // Dropoff
       if (dropoffMode === 'end') {
-        // We don't have custom_dropoff columns yet, use dropoff_stop_id = null and rely on route destination
-        // For now we store nothing extra — the driver knows the route end
+        bookingData.custom_dropoff_lat = selectedRide.routes.destination_lat;
+        bookingData.custom_dropoff_lng = selectedRide.routes.destination_lng;
+        bookingData.custom_dropoff_name = lang === 'ar' ? selectedRide.routes.destination_name_ar : selectedRide.routes.destination_name_en;
       } else if (customDropoff) {
-        // No custom_dropoff columns — we'd need a migration. For now store name in custom_pickup_name won't work.
-        // We'll note the dropoff in a different way — skip for now, or store as pickup_stop_id = null
+        bookingData.custom_dropoff_lat = customDropoff.lat;
+        bookingData.custom_dropoff_lng = customDropoff.lng;
+        bookingData.custom_dropoff_name = customDropoff.name;
       }
 
       const { error } = await supabase.from('bookings').insert(bookingData);

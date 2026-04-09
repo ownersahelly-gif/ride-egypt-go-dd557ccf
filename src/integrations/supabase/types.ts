@@ -19,6 +19,9 @@ export type Database = {
           boarded_at: string | null
           boarding_code: string | null
           created_at: string
+          custom_dropoff_lat: number | null
+          custom_dropoff_lng: number | null
+          custom_dropoff_name: string | null
           custom_pickup_lat: number | null
           custom_pickup_lng: number | null
           custom_pickup_name: string | null
@@ -40,6 +43,9 @@ export type Database = {
           boarded_at?: string | null
           boarding_code?: string | null
           created_at?: string
+          custom_dropoff_lat?: number | null
+          custom_dropoff_lng?: number | null
+          custom_dropoff_name?: string | null
           custom_pickup_lat?: number | null
           custom_pickup_lng?: number | null
           custom_pickup_name?: string | null
@@ -61,6 +67,9 @@ export type Database = {
           boarded_at?: string | null
           boarding_code?: string | null
           created_at?: string
+          custom_dropoff_lat?: number | null
+          custom_dropoff_lng?: number | null
+          custom_dropoff_name?: string | null
           custom_pickup_lat?: number | null
           custom_pickup_lng?: number | null
           custom_pickup_name?: string | null
