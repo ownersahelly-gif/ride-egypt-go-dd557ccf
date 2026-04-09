@@ -139,7 +139,10 @@ const ActiveRide = () => {
     markers.push({ lat: route.destination_lat, lng: route.destination_lng, label: 'E', color: 'red' });
   }
   
-  const activeBookings = bookings.filter(b => b.status !== 'completed');
+  const activeBookings = bookings.filter(b => b.status !== 'completed').sort((a: any, b: any) => {
+    if (phase === 'pickup') return (a.stops?.stop_order ?? 999) - (b.stops?.stop_order ?? 999);
+    return (a.dropoff?.stop_order ?? 999) - (b.dropoff?.stop_order ?? 999);
+  });
   activeBookings.forEach((b, i) => {
     if (phase === 'pickup' && b.status === 'confirmed' && b.stops?.lat) {
       markers.push({ lat: b.stops.lat, lng: b.stops.lng, label: `P${i + 1}`, color: 'green' });
