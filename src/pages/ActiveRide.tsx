@@ -11,7 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import {
   ChevronLeft, ChevronRight, Users, MapPin, MessageCircle,
   CheckCircle2, Navigation, Loader2, UserCheck, LogOut as DropOff,
-  Phone, ArrowDown, Clock, AlertCircle
+  Phone, ArrowDown, Clock, AlertCircle, Flag, Square
 } from 'lucide-react';
 
 interface OrderedStop {
@@ -211,6 +211,27 @@ const ActiveRide = () => {
     toast({ title: lang === 'ar' ? 'تم الإنزال ✓' : 'Dropped Off ✓' });
   };
 
+  const completeRide = async () => {
+    const boardedBookings = bookings.filter(b => b.status === 'boarded');
+    if (boardedBookings.length === 0) return;
+    const now = new Date().toISOString();
+    const promises = boardedBookings.map(b =>
+      supabase.from('bookings').update({ status: 'completed', dropped_off_at: now }).eq('id', b.id)
+    );
+    const results = await Promise.all(promises);
+    const hasError = results.some(r => r.error);
+    if (hasError) {
+      toast({ title: t('auth.error'), description: lang === 'ar' ? 'حدث خطأ' : 'Something went wrong', variant: 'destructive' });
+      return;
+    }
+    // Also set shuttle to inactive
+    if (shuttle?.id) {
+      await supabase.from('shuttles').update({ status: 'inactive' }).eq('id', shuttle.id);
+    }
+    setBookings(prev => prev.map(b => b.status === 'boarded' ? { ...b, status: 'completed', dropped_off_at: now } : b));
+    toast({ title: lang === 'ar' ? 'تم إنهاء الرحلة ✓' : 'Ride completed! ✓' });
+  };
+
   // Build markers
   const markers: { lat: number; lng: number; label?: string; color?: 'red' | 'green' | 'blue' }[] = [];
   if (route) {
@@ -228,7 +249,10 @@ const ActiveRide = () => {
 
   const pickupStops = orderedStops.filter(s => s.type === 'pickup');
   const dropoffStops = orderedStops.filter(s => s.type === 'dropoff');
-  const allBoarded = bookings.length > 0 && bookings.every(b => b.status === 'boarded');
+  const boardedCount = bookings.filter(b => b.status === 'boarded').length;
+  const totalCount = bookings.length;
+  const allBoarded = totalCount > 0 && bookings.every(b => b.status === 'boarded');
+  const allCompleted = totalCount > 0 && bookings.every(b => b.status === 'completed');
 
   if (loading) {
     return (
@@ -269,6 +293,18 @@ const ActiveRide = () => {
           zoom={12}
           showUserLocation
         />
+        {/* Floating passenger count badge */}
+        <div className="absolute top-3 start-3 z-[5] bg-card border border-border rounded-xl shadow-lg px-4 py-2.5 flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            <UserCheck className="w-4 h-4 text-primary" />
+            <span className="text-sm font-bold text-foreground">{boardedCount}</span>
+            <span className="text-xs text-muted-foreground">/ {totalCount}</span>
+          </div>
+          <div className="w-px h-5 bg-border" />
+          <span className="text-xs text-muted-foreground">
+            {lang === 'ar' ? 'في الشاتل' : 'on board'}
+          </span>
+        </div>
       </div>
 
       {/* Stops timeline */}
@@ -457,6 +493,23 @@ const ActiveRide = () => {
           </div>
         )}
       </div>
+
+      {/* Complete Ride button */}
+      {boardedCount > 0 && !allCompleted && (
+        <div className="border-t border-border bg-card p-4">
+          <Button
+            className="w-full"
+            size="lg"
+            variant="destructive"
+            onClick={completeRide}
+          >
+            <Flag className="w-5 h-5 me-2" />
+            {lang === 'ar'
+              ? `إنهاء الرحلة (${boardedCount} راكب)`
+              : `Complete Ride (${boardedCount} passengers)`}
+          </Button>
+        </div>
+      )}
 
       <RideChat
         bookingId={chatBookingId || ''}
