@@ -259,19 +259,71 @@ const BookRide = () => {
   const isPickupValid = pickupMode === 'start' ? true : (!!customPickup && pickupResult?.ok === true);
   const isDropoffValid = dropoffMode === 'end' ? true : (!!customDropoff && dropoffResult?.ok === true);
 
+  // InstaPay payment proof
+  const [paymentProof, setPaymentProof] = useState<File | null>(null);
+  const [paymentPreview, setPaymentPreview] = useState<string | null>(null);
+  const [uploadingProof, setUploadingProof] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handlePaymentFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: lang === 'ar' ? 'الملف كبير جداً' : 'File too large', description: lang === 'ar' ? 'الحد الأقصى 5 ميجا' : 'Max 5MB', variant: 'destructive' });
+      return;
+    }
+    setPaymentProof(file);
+    setPaymentPreview(URL.createObjectURL(file));
+  };
+
+  const isRideFull = selectedRide?.available_seats === 0;
+
   // --- Booking ---
-  const handleBook = async () => {
+  const handleBook = async (asWaitlist = false) => {
     if (!user || !selectedRide) return;
     if (!isPickupValid || !isDropoffValid) {
       toast({ title: lang === 'ar' ? 'اختر نقاط الركوب والنزول' : 'Select pickup & dropoff', variant: 'destructive' });
       return;
     }
+    if (!asWaitlist && !paymentProof) {
+      toast({ title: lang === 'ar' ? 'أرفق إثبات الدفع' : 'Attach payment proof', description: lang === 'ar' ? 'أرسل لقطة شاشة من InstaPay' : 'Upload InstaPay screenshot', variant: 'destructive' });
+      return;
+    }
+    if (!asWaitlist && selectedRide.available_seats < 1) {
+      toast({ title: lang === 'ar' ? 'لا توجد مقاعد' : 'No seats available', variant: 'destructive' });
+      return;
+    }
     setLoading(true);
     try {
-      if (selectedRide.available_seats < 1) {
-        toast({ title: lang === 'ar' ? 'لا توجد مقاعد' : 'No seats available', variant: 'destructive' });
-        setLoading(false);
-        return;
+      let proofUrl: string | null = null;
+
+      // Upload payment proof
+      if (paymentProof) {
+        setUploadingProof(true);
+        const ext = paymentProof.name.split('.').pop();
+        const filePath = `${user.id}/${Date.now()}.${ext}`;
+        const { error: uploadErr } = await supabase.storage
+          .from('instapay-proofs')
+          .upload(filePath, paymentProof);
+        if (uploadErr) throw uploadErr;
+        const { data: urlData } = supabase.storage.from('instapay-proofs').getPublicUrl(filePath);
+        proofUrl = urlData?.publicUrl || filePath;
+        setUploadingProof(false);
+      }
+
+      // Calculate waitlist position
+      let waitlistPos: number | null = null;
+      if (asWaitlist) {
+        const { data: existingWaitlist } = await supabase
+          .from('bookings')
+          .select('waitlist_position')
+          .eq('route_id', selectedRide.route_id)
+          .eq('scheduled_date', selectedRide.ride_date)
+          .eq('scheduled_time', selectedRide.departure_time)
+          .eq('status', 'waitlist')
+          .order('waitlist_position', { ascending: false })
+          .limit(1);
+        waitlistPos = ((existingWaitlist?.[0]?.waitlist_position as number) || 0) + 1;
       }
 
       const bookingData: any = {
@@ -282,12 +334,13 @@ const BookRide = () => {
         total_price: selectedRide.routes?.price || 0,
         scheduled_date: selectedRide.ride_date,
         scheduled_time: selectedRide.departure_time,
-        status: 'pending',
+        status: asWaitlist ? 'waitlist' : 'pending',
+        payment_proof_url: proofUrl,
+        waitlist_position: waitlistPos,
       };
 
       // Pickup
       if (pickupMode === 'start') {
-        // Use route origin as pickup
         bookingData.custom_pickup_lat = selectedRide.routes.origin_lat;
         bookingData.custom_pickup_lng = selectedRide.routes.origin_lng;
         bookingData.custom_pickup_name = lang === 'ar' ? selectedRide.routes.origin_name_ar : selectedRide.routes.origin_name_en;
@@ -311,16 +364,26 @@ const BookRide = () => {
       const { error } = await supabase.from('bookings').insert(bookingData);
       if (error) throw error;
 
-      await supabase.from('ride_instances').update({
-        available_seats: selectedRide.available_seats - 1,
-      }).eq('id', selectedRide.id);
+      if (!asWaitlist) {
+        await supabase.from('ride_instances').update({
+          available_seats: selectedRide.available_seats - 1,
+        }).eq('id', selectedRide.id);
+      }
 
-      toast({ title: t('booking.success'), description: t('booking.successDesc') });
+      toast({
+        title: asWaitlist
+          ? (lang === 'ar' ? 'تم إضافتك لقائمة الانتظار' : 'Added to waitlist')
+          : (lang === 'ar' ? 'تم الحجز بنجاح' : 'Booking submitted'),
+        description: asWaitlist
+          ? (lang === 'ar' ? `ترتيبك: #${waitlistPos}` : `Your position: #${waitlistPos}`)
+          : (lang === 'ar' ? 'في انتظار موافقة المسؤول' : 'Waiting for admin approval'),
+      });
       navigate('/my-bookings');
     } catch (error: any) {
       toast({ title: t('auth.error'), description: error.message, variant: 'destructive' });
     } finally {
       setLoading(false);
+      setUploadingProof(false);
     }
   };
 
