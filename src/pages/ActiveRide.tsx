@@ -494,6 +494,23 @@ const ActiveRide = () => {
         )}
       </div>
 
+      {/* Complete Ride button */}
+      {boardedCount > 0 && !allCompleted && (
+        <div className="border-t border-border bg-card p-4">
+          <Button
+            className="w-full"
+            size="lg"
+            variant="destructive"
+            onClick={completeRide}
+          >
+            <Flag className="w-5 h-5 me-2" />
+            {lang === 'ar'
+              ? `إنهاء الرحلة (${boardedCount} راكب)`
+              : `Complete Ride (${boardedCount} passengers)`}
+          </Button>
+        </div>
+      )}
+
       <RideChat
         bookingId={chatBookingId || ''}
         isOpen={!!chatBookingId}
