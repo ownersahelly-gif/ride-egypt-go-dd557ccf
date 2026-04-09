@@ -256,6 +256,7 @@ const AdminPanel = () => {
 
   const tabs: { key: AdminTab; icon: any; label: string }[] = [
     { key: 'analytics', icon: BarChart3, label: lang === 'ar' ? 'التحليلات' : 'Analytics' },
+    { key: 'approvals', icon: CheckCircle2, label: lang === 'ar' ? 'الموافقات' : 'Approvals' },
     { key: 'routes', icon: Route, label: lang === 'ar' ? 'المسارات' : 'Routes' },
     { key: 'drivers', icon: Users, label: lang === 'ar' ? 'السائقين' : 'Drivers' },
     { key: 'shuttles', icon: Car, label: lang === 'ar' ? 'الشاتلات' : 'Shuttles' },
