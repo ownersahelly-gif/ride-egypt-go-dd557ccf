@@ -4,9 +4,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { MapPin, Clock, Ticket, ChevronLeft, ChevronRight, MessageCircle, Navigation, Key } from 'lucide-react';
+import { MapPin, Clock, Ticket, ChevronLeft, ChevronRight, MessageCircle, Navigation, Key, Star, Share2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import RideChat from '@/components/RideChat';
+import RideRating from '@/components/RideRating';
 
 const MyBookings = () => {
   const { user } = useAuth();
@@ -16,12 +17,22 @@ const MyBookings = () => {
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [chatBookingId, setChatBookingId] = useState<string | null>(null);
+  const [ratingBooking, setRatingBooking] = useState<any>(null);
+  const [ratedBookingIds, setRatedBookingIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!user) return;
-    supabase.from('bookings').select('*, routes(*)').eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .then(({ data }) => { setBookings(data || []); setLoading(false); });
+    const fetchBookings = async () => {
+      const [{ data: bookingsData }, { data: ratingsData }] = await Promise.all([
+        supabase.from('bookings').select('*, routes(*), shuttles(driver_id)').eq('user_id', user.id)
+          .order('created_at', { ascending: false }),
+        supabase.from('ratings').select('booking_id').eq('user_id', user.id),
+      ]);
+      setBookings(bookingsData || []);
+      setRatedBookingIds(new Set((ratingsData || []).map(r => r.booking_id)));
+      setLoading(false);
+    };
+    fetchBookings();
   }, [user]);
 
   const cancelBooking = async (id: string) => {
@@ -75,7 +86,7 @@ const MyBookings = () => {
                   <span>{booking.seats} {t('booking.seat')}</span>
                 </div>
 
-                {/* Boarding code - shown for confirmed/boarded bookings */}
+                {/* Boarding code */}
                 {booking.boarding_code && ['confirmed', 'pending'].includes(booking.status) && (
                   <div className="bg-surface rounded-lg p-3 mb-3 flex items-center gap-3">
                     <Key className="w-5 h-5 text-primary" />
@@ -89,17 +100,38 @@ const MyBookings = () => {
                   </div>
                 )}
 
+                {/* Rating prompt for completed rides */}
+                {booking.status === 'completed' && !ratedBookingIds.has(booking.id) && (
+                  <div className="bg-secondary/10 rounded-lg p-3 mb-3 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Star className="w-4 h-4 text-secondary" />
+                      <span className="text-sm font-medium text-foreground">
+                        {lang === 'ar' ? 'كيف كانت رحلتك؟' : 'How was your ride?'}
+                      </span>
+                    </div>
+                    <Button size="sm" variant="secondary" onClick={() => setRatingBooking(booking)}>
+                      {lang === 'ar' ? 'قيّم الآن' : 'Rate Now'}
+                    </Button>
+                  </div>
+                )}
+
+                {/* Rated indicator */}
+                {booking.status === 'completed' && ratedBookingIds.has(booking.id) && (
+                  <div className="flex items-center gap-1 mb-3 text-xs text-muted-foreground">
+                    <Star className="w-3 h-3 fill-secondary text-secondary" />
+                    {lang === 'ar' ? 'تم التقييم' : 'Rated'}
+                  </div>
+                )}
+
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-primary">{booking.total_price} EGP</span>
                   <div className="flex items-center gap-2">
-                    {/* Chat button for active bookings */}
                     {['confirmed', 'boarded'].includes(booking.status) && (
                       <Button variant="outline" size="sm" onClick={() => setChatBookingId(booking.id)}>
                         <MessageCircle className="w-3.5 h-3.5 me-1" />
                         {lang === 'ar' ? 'محادثة' : 'Chat'}
                       </Button>
                     )}
-                    {/* Track button */}
                     {['confirmed', 'boarded'].includes(booking.status) && (
                       <Link to={`/track?booking=${booking.id}`}>
                         <Button variant="outline" size="sm">
@@ -124,6 +156,17 @@ const MyBookings = () => {
         isOpen={!!chatBookingId}
         onClose={() => setChatBookingId(null)}
       />
+
+      {ratingBooking && (
+        <RideRating
+          bookingId={ratingBooking.id}
+          driverId={ratingBooking.shuttles?.driver_id}
+          routeName={lang === 'ar' ? ratingBooking.routes?.name_ar : ratingBooking.routes?.name_en}
+          isOpen={!!ratingBooking}
+          onClose={() => setRatingBooking(null)}
+          onRated={() => setRatedBookingIds(prev => new Set([...prev, ratingBooking.id]))}
+        />
+      )}
     </div>
   );
 };

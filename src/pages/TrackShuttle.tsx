@@ -7,9 +7,11 @@ import { Button } from '@/components/ui/button';
 import MapView from '@/components/MapView';
 import {
   ChevronLeft, ChevronRight, MapPin, Clock, Car, RefreshCw,
-  Radio, Users, Navigation, Phone, MessageCircle, Key, ArrowRight
+  Radio, Users, Navigation, Phone, MessageCircle, Key, ArrowRight,
+  Shield, Share2, ExternalLink
 } from 'lucide-react';
 import RideChat from '@/components/RideChat';
+import { useToast } from '@/hooks/use-toast';
 
 interface PassengerStop {
   userId: string;
@@ -26,6 +28,7 @@ interface PassengerStop {
 const TrackShuttle = () => {
   const { user } = useAuth();
   const { t, lang } = useLanguage();
+  const { toast } = useToast();
   const [searchParams] = useSearchParams();
   const bookingId = searchParams.get('booking');
   const Back = lang === 'ar' ? ChevronRight : ChevronLeft;
@@ -37,6 +40,7 @@ const TrackShuttle = () => {
   const [loading, setLoading] = useState(true);
   const [isLive, setIsLive] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [sosActive, setSosActive] = useState(false);
 
   // All bookings on this ride (for calculating stops before current user)
   const [rideBookings, setRideBookings] = useState<any[]>([]);
@@ -307,6 +311,30 @@ const TrackShuttle = () => {
             </span>
           )}
           <div className="ms-auto flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-destructive"
+              onClick={() => setSosActive(true)}
+              title="SOS"
+            >
+              <Shield className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => {
+              const url = `${window.location.origin}/track?booking=${bookingId}`;
+              if (navigator.share) {
+                navigator.share({
+                  title: lang === 'ar' ? 'تتبع رحلتي' : 'Track My Ride',
+                  text: lang === 'ar' ? 'تتبع رحلتي المباشرة على مسار' : 'Track my live ride on Massar',
+                  url,
+                });
+              } else {
+                navigator.clipboard.writeText(url);
+                toast({ title: lang === 'ar' ? 'تم نسخ الرابط' : 'Link copied!' });
+              }
+            }}>
+              <Share2 className="w-4 h-4" />
+            </Button>
             <Button variant="ghost" size="icon" onClick={() => setChatOpen(true)}>
               <MessageCircle className="w-4 h-4" />
             </Button>
@@ -494,6 +522,64 @@ const TrackShuttle = () => {
         isOpen={chatOpen}
         onClose={() => setChatOpen(false)}
       />
+
+      {/* SOS Emergency Dialog */}
+      {sosActive && (
+        <div className="fixed inset-0 z-50 bg-background/80 flex items-center justify-center p-4">
+          <div className="bg-card border border-destructive rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+            <div className="text-center mb-5">
+              <div className="w-16 h-16 rounded-full bg-destructive/10 mx-auto mb-3 flex items-center justify-center">
+                <Shield className="w-8 h-8 text-destructive" />
+              </div>
+              <h3 className="text-lg font-bold text-foreground mb-1">
+                {lang === 'ar' ? 'طوارئ SOS' : 'Emergency SOS'}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {lang === 'ar'
+                  ? 'اختر إجراء الطوارئ المناسب'
+                  : 'Choose the appropriate emergency action'}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <a href="tel:122" className="block">
+                <Button variant="destructive" className="w-full" size="lg">
+                  <Phone className="w-5 h-5 me-2" />
+                  {lang === 'ar' ? 'اتصل بالشرطة (122)' : 'Call Police (122)'}
+                </Button>
+              </a>
+              <a href="tel:123" className="block">
+                <Button variant="destructive" className="w-full" size="lg">
+                  <Phone className="w-5 h-5 me-2" />
+                  {lang === 'ar' ? 'اتصل بالإسعاف (123)' : 'Call Ambulance (123)'}
+                </Button>
+              </a>
+              <Button
+                variant="outline"
+                className="w-full"
+                size="lg"
+                onClick={() => {
+                  const url = `${window.location.origin}/track?booking=${bookingId}`;
+                  const text = lang === 'ar'
+                    ? `أحتاج مساعدة! تتبع موقعي: ${url}`
+                    : `I need help! Track my location: ${url}`;
+                  if (navigator.share) {
+                    navigator.share({ title: 'SOS', text, url });
+                  } else {
+                    navigator.clipboard.writeText(text);
+                    toast({ title: lang === 'ar' ? 'تم نسخ الرابط' : 'Link copied!' });
+                  }
+                }}
+              >
+                <Share2 className="w-5 h-5 me-2" />
+                {lang === 'ar' ? 'شارك موقعك مع شخص' : 'Share location with someone'}
+              </Button>
+              <Button variant="ghost" className="w-full" onClick={() => setSosActive(false)}>
+                {lang === 'ar' ? 'إلغاء' : 'Cancel'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
