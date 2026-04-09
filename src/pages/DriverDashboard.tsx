@@ -352,7 +352,134 @@ const DriverDashboard = () => {
               </div>
             )}
 
-            {/* Schedule Tab - NEW */}
+            {/* Earnings Tab */}
+            {tab === 'earnings' && (() => {
+              const completed = bookings.filter(b => b.status === 'completed');
+              const today = new Date();
+              const todayStr = today.toISOString().split('T')[0];
+              
+              // This week (Mon-Sun)
+              const dayOfWeek = today.getDay();
+              const mondayOffset = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+              const weekStart = new Date(today);
+              weekStart.setDate(today.getDate() - mondayOffset);
+              const weekStartStr = weekStart.toISOString().split('T')[0];
+              
+              // This month
+              const monthStartStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`;
+
+              const dailyEarnings = completed
+                .filter(b => b.scheduled_date === todayStr)
+                .reduce((s, b) => s + parseFloat(b.total_price || 0), 0);
+              const weeklyEarnings = completed
+                .filter(b => b.scheduled_date >= weekStartStr)
+                .reduce((s, b) => s + parseFloat(b.total_price || 0), 0);
+              const monthlyEarnings = completed
+                .filter(b => b.scheduled_date >= monthStartStr)
+                .reduce((s, b) => s + parseFloat(b.total_price || 0), 0);
+              const allTimeEarnings = completed
+                .reduce((s, b) => s + parseFloat(b.total_price || 0), 0);
+
+              const dailyRides = completed.filter(b => b.scheduled_date === todayStr).length;
+              const weeklyRides = completed.filter(b => b.scheduled_date >= weekStartStr).length;
+              const monthlyRides = completed.filter(b => b.scheduled_date >= monthStartStr).length;
+
+              // Ratings
+              const avgRating = 0; // Would need to fetch from ratings table
+
+              return (
+                <div className="space-y-6">
+                  {/* Period Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {[
+                      { label: lang === 'ar' ? 'اليوم' : 'Today', amount: dailyEarnings, rides: dailyRides, bg: 'bg-green-50 dark:bg-green-900/20' },
+                      { label: lang === 'ar' ? 'هذا الأسبوع' : 'This Week', amount: weeklyEarnings, rides: weeklyRides, bg: 'bg-primary/5' },
+                      { label: lang === 'ar' ? 'هذا الشهر' : 'This Month', amount: monthlyEarnings, rides: monthlyRides, bg: 'bg-secondary/5' },
+                    ].map((period, i) => (
+                      <div key={i} className={`rounded-2xl border border-border p-5 ${period.bg}`}>
+                        <p className="text-sm text-muted-foreground mb-1">{period.label}</p>
+                        <p className="text-3xl font-bold text-foreground">{period.amount.toFixed(0)} <span className="text-sm font-normal text-muted-foreground">EGP</span></p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {period.rides} {lang === 'ar' ? 'رحلة' : 'rides'}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* All-time summary */}
+                  <div className="bg-card border border-border rounded-2xl p-6">
+                    <h3 className="font-semibold text-foreground mb-4">
+                      {lang === 'ar' ? 'الإجمالي' : 'All Time'}
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-surface rounded-xl p-4">
+                        <div className="flex items-center gap-2 mb-1">
+                          <DollarSign className="w-4 h-4 text-green-600" />
+                          <p className="text-sm text-muted-foreground">{lang === 'ar' ? 'إجمالي الأرباح' : 'Total Earnings'}</p>
+                        </div>
+                        <p className="text-2xl font-bold text-foreground">{allTimeEarnings.toFixed(0)} EGP</p>
+                      </div>
+                      <div className="bg-surface rounded-xl p-4">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Navigation className="w-4 h-4 text-primary" />
+                          <p className="text-sm text-muted-foreground">{lang === 'ar' ? 'إجمالي الرحلات' : 'Total Rides'}</p>
+                        </div>
+                        <p className="text-2xl font-bold text-foreground">{completed.length}</p>
+                      </div>
+                      <div className="bg-surface rounded-xl p-4">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Users className="w-4 h-4 text-primary" />
+                          <p className="text-sm text-muted-foreground">{lang === 'ar' ? 'إجمالي الركاب' : 'Total Passengers'}</p>
+                        </div>
+                        <p className="text-2xl font-bold text-foreground">
+                          {completed.reduce((s, b) => s + (b.seats || 1), 0)}
+                        </p>
+                      </div>
+                      <div className="bg-surface rounded-xl p-4">
+                        <div className="flex items-center gap-2 mb-1">
+                          <DollarSign className="w-4 h-4 text-secondary" />
+                          <p className="text-sm text-muted-foreground">{lang === 'ar' ? 'متوسط الرحلة' : 'Avg per Ride'}</p>
+                        </div>
+                        <p className="text-2xl font-bold text-foreground">
+                          {completed.length > 0 ? (allTimeEarnings / completed.length).toFixed(0) : 0} EGP
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Recent completed rides */}
+                  <div className="bg-card border border-border rounded-2xl p-6">
+                    <h3 className="font-semibold text-foreground mb-4">
+                      {lang === 'ar' ? 'آخر الرحلات المكتملة' : 'Recent Completed Rides'}
+                    </h3>
+                    {completed.length === 0 ? (
+                      <p className="text-center text-muted-foreground py-4">
+                        {lang === 'ar' ? 'لا يوجد رحلات مكتملة بعد' : 'No completed rides yet'}
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {completed.slice(0, 10).map(b => (
+                          <div key={b.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
+                            <div>
+                              <p className="text-sm font-medium text-foreground">
+                                {lang === 'ar' ? b.routes?.name_ar : b.routes?.name_en}
+                              </p>
+                              <p className="text-xs text-muted-foreground">{b.scheduled_date} · {b.scheduled_time}</p>
+                            </div>
+                            <div className="text-end">
+                              <p className="font-semibold text-foreground">{b.total_price} EGP</p>
+                              <p className="text-xs text-muted-foreground">{b.seats} {lang === 'ar' ? 'مقعد' : 'seat'}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Schedule Tab */}
             {tab === 'schedule' && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
