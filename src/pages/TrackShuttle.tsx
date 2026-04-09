@@ -522,6 +522,64 @@ const TrackShuttle = () => {
         isOpen={chatOpen}
         onClose={() => setChatOpen(false)}
       />
+
+      {/* SOS Emergency Dialog */}
+      {sosActive && (
+        <div className="fixed inset-0 z-50 bg-background/80 flex items-center justify-center p-4">
+          <div className="bg-card border border-destructive rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+            <div className="text-center mb-5">
+              <div className="w-16 h-16 rounded-full bg-destructive/10 mx-auto mb-3 flex items-center justify-center">
+                <Shield className="w-8 h-8 text-destructive" />
+              </div>
+              <h3 className="text-lg font-bold text-foreground mb-1">
+                {lang === 'ar' ? 'طوارئ SOS' : 'Emergency SOS'}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {lang === 'ar'
+                  ? 'اختر إجراء الطوارئ المناسب'
+                  : 'Choose the appropriate emergency action'}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <a href="tel:122" className="block">
+                <Button variant="destructive" className="w-full" size="lg">
+                  <Phone className="w-5 h-5 me-2" />
+                  {lang === 'ar' ? 'اتصل بالشرطة (122)' : 'Call Police (122)'}
+                </Button>
+              </a>
+              <a href="tel:123" className="block">
+                <Button variant="destructive" className="w-full" size="lg">
+                  <Phone className="w-5 h-5 me-2" />
+                  {lang === 'ar' ? 'اتصل بالإسعاف (123)' : 'Call Ambulance (123)'}
+                </Button>
+              </a>
+              <Button
+                variant="outline"
+                className="w-full"
+                size="lg"
+                onClick={() => {
+                  const url = `${window.location.origin}/track?booking=${bookingId}`;
+                  const text = lang === 'ar'
+                    ? `أحتاج مساعدة! تتبع موقعي: ${url}`
+                    : `I need help! Track my location: ${url}`;
+                  if (navigator.share) {
+                    navigator.share({ title: 'SOS', text, url });
+                  } else {
+                    navigator.clipboard.writeText(text);
+                    toast({ title: lang === 'ar' ? 'تم نسخ الرابط' : 'Link copied!' });
+                  }
+                }}
+              >
+                <Share2 className="w-5 h-5 me-2" />
+                {lang === 'ar' ? 'شارك موقعك مع شخص' : 'Share location with someone'}
+              </Button>
+              <Button variant="ghost" className="w-full" onClick={() => setSosActive(false)}>
+                {lang === 'ar' ? 'إلغاء' : 'Cancel'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
