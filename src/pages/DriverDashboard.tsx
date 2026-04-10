@@ -558,8 +558,15 @@ const DriverDashboard = () => {
                                 </div>
                               </div>
                             </button>
-
-                            {/* Expanded detail */}
+                              {/* Delete button on card */}
+                              <button
+                                onClick={() => deleteSchedule(slot.scheduleId)}
+                                className="px-3 flex items-center justify-center border-s border-border hover:bg-destructive/10 transition-colors"
+                                title={lang === 'ar' ? 'حذف' : 'Delete'}
+                              >
+                                <Trash2 className="w-4 h-4 text-destructive/60 hover:text-destructive" />
+                              </button>
+                            </div>
                             {isExpanded && (
                               <div className="border-t border-border p-4 space-y-3">
                                 {/* Status message */}
