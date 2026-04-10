@@ -47,6 +47,7 @@ const DriverDashboard = () => {
     return_time: '17:00',
     is_recurring: true,
     min_passengers: 5,
+    trip_direction: 'both' as 'go' | 'return' | 'both',
   });
   const [savingSchedule, setSavingSchedule] = useState(false);
   const scheduleFormRef = useRef<HTMLDivElement>(null);
@@ -191,9 +192,10 @@ const DriverDashboard = () => {
     setSavingSchedule(true);
     const departureEntries = scheduleForm.days.map(day => ({
       driver_id: user.id, route_id: scheduleForm.route_id, shuttle_id: shuttle.id,
-      day_of_week: day, departure_time: scheduleForm.departure_time,
+      day_of_week: day,
+      departure_time: scheduleForm.trip_direction === 'return' ? scheduleForm.return_time : scheduleForm.departure_time,
       is_recurring: scheduleForm.is_recurring, is_active: true, min_passengers: scheduleForm.min_passengers,
-      return_time: scheduleForm.return_time || null,
+      return_time: scheduleForm.trip_direction === 'go' ? null : (scheduleForm.trip_direction === 'return' ? null : scheduleForm.return_time),
     }));
     const { error } = await supabase.from('driver_schedules').insert(departureEntries);
     if (error) toast({ title: t('auth.error'), description: error.message, variant: 'destructive' });
@@ -204,7 +206,7 @@ const DriverDashboard = () => {
       setDriverSchedules(data || []);
       setShowScheduleForm(false);
       setSelectedRouteForSchedule(null);
-      setScheduleForm({ route_id: '', days: [], departure_time: '08:00', return_time: '17:00', is_recurring: true, min_passengers: 5 });
+      setScheduleForm({ route_id: '', days: [], departure_time: '08:00', return_time: '17:00', is_recurring: true, min_passengers: 5, trip_direction: 'both' });
       setTab('home');
     }
     setSavingSchedule(false);
@@ -446,6 +448,18 @@ const DriverDashboard = () => {
                       {Object.entries(routeGroups).map(([routeId, schedules]) => {
                         const routeInfo = (schedules as any[])[0]?.routes;
                         const routeBookings = bookings.filter(b => b.route_id === routeId && b.status !== 'cancelled');
+                        // Group bookings by day of week
+                        const bookingsByDay: Record<number, any[]> = {};
+                        routeBookings.forEach(b => {
+                          const dayOfWeek = new Date(b.scheduled_date).getDay();
+                          if (!bookingsByDay[dayOfWeek]) bookingsByDay[dayOfWeek] = [];
+                          bookingsByDay[dayOfWeek].push(b);
+                        });
+                        const openGoogleMapsNav = () => {
+                          if (routeInfo?.origin_lat && routeInfo?.origin_lng) {
+                            window.open(`https://www.google.com/maps/dir/?api=1&destination=${routeInfo.origin_lat},${routeInfo.origin_lng}&travelmode=driving`, '_blank');
+                          }
+                        };
                         return (
                           <div key={routeId} className="bg-card border border-primary/20 rounded-2xl p-4 space-y-3">
                             <div className="flex items-center justify-between">
@@ -458,56 +472,77 @@ const DriverDashboard = () => {
                               <span className="text-sm font-bold text-foreground">{routeInfo?.price} EGP</span>
                             </div>
                             {routeInfo?.origin_lat && routeInfo?.destination_lat && (
-                              <MapView
-                                className="h-[150px]"
-                                markers={[
-                                  { lat: routeInfo.origin_lat, lng: routeInfo.origin_lng, label: 'A', color: 'green' },
-                                  { lat: routeInfo.destination_lat, lng: routeInfo.destination_lng, label: 'B', color: 'red' },
-                                ]}
-                                origin={{ lat: routeInfo.origin_lat, lng: routeInfo.origin_lng }}
-                                destination={{ lat: routeInfo.destination_lat, lng: routeInfo.destination_lng }}
-                                showDirections
-                                showUserLocation={false}
-                                zoom={10}
-                              />
-                            )}
-                            <div className="flex flex-wrap gap-1.5 text-xs text-muted-foreground">
-                              {(schedules as any[]).sort((a: any, b: any) => a.day_of_week - b.day_of_week).map((s: any) => (
-                                <span key={s.id} className="bg-surface px-2 py-1 rounded-lg">{dayNames[s.day_of_week]} {s.departure_time?.slice(0, 5)}</span>
-                              ))}
-                            </div>
-                            <div>
-                              <p className="text-xs font-medium text-muted-foreground mb-2">
-                                <Users className="w-3 h-3 inline me-1" />
-                                {lang === 'ar' ? `طلبات الركاب (${routeBookings.length})` : `Passenger Requests (${routeBookings.length})`}
-                              </p>
-                              {routeBookings.length === 0 ? (
-                                <p className="text-xs text-muted-foreground text-center py-2">{lang === 'ar' ? 'لا يوجد طلبات بعد' : 'No requests yet'}</p>
-                              ) : (
-                                <div className="space-y-1.5">
-                                  {routeBookings.slice(0, 5).map(b => {
-                                    const passenger = passengerProfiles[b.user_id];
-                                    return (
-                                      <div key={b.id} className="flex items-center justify-between bg-surface rounded-xl px-3 py-2">
-                                        <div className="flex items-center gap-2">
-                                          <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center"><User className="w-3.5 h-3.5 text-primary" /></div>
-                                          <div>
-                                            <p className="text-xs font-medium text-foreground">{passenger?.full_name || (lang === 'ar' ? 'راكب' : 'Rider')}</p>
-                                            <p className="text-[10px] text-muted-foreground">{b.scheduled_date} · {b.scheduled_time?.slice(0, 5)} · {b.seats} {t('booking.seat')}</p>
-                                          </div>
-                                        </div>
-                                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${statusColors[b.status]}`}>{t(`booking.status.${b.status}`)}</span>
-                                      </div>
-                                    );
-                                  })}
-                                  {routeBookings.length > 5 && (
-                                    <p className="text-xs text-primary text-center cursor-pointer" onClick={() => setTab('trips')}>
-                                      +{routeBookings.length - 5} {lang === 'ar' ? 'المزيد' : 'more'}
-                                    </p>
-                                  )}
+                              <div className="relative cursor-pointer" onClick={openGoogleMapsNav}>
+                                <MapView
+                                  className="h-[150px]"
+                                  markers={[
+                                    { lat: routeInfo.origin_lat, lng: routeInfo.origin_lng, label: 'A', color: 'green' },
+                                    { lat: routeInfo.destination_lat, lng: routeInfo.destination_lng, label: 'B', color: 'red' },
+                                  ]}
+                                  origin={{ lat: routeInfo.origin_lat, lng: routeInfo.origin_lng }}
+                                  destination={{ lat: routeInfo.destination_lat, lng: routeInfo.destination_lng }}
+                                  showDirections
+                                  showUserLocation={false}
+                                  zoom={10}
+                                />
+                                <div className="absolute bottom-2 start-2 bg-card/90 backdrop-blur-sm rounded-lg px-2 py-1 flex items-center gap-1 text-xs text-primary shadow">
+                                  <Navigation className="w-3 h-3" />
+                                  {lang === 'ar' ? 'اضغط للتنقل' : 'Tap to navigate'}
                                 </div>
-                              )}
+                              </div>
+                            )}
+                            {/* Per-day passenger breakdown */}
+                            <div className="space-y-1.5">
+                              {(schedules as any[]).sort((a: any, b: any) => a.day_of_week - b.day_of_week).map((s: any) => {
+                                const dayBookings = bookingsByDay[s.day_of_week] || [];
+                                return (
+                                  <div key={s.id} className="flex items-center justify-between bg-surface rounded-lg px-3 py-2">
+                                    <div className="flex items-center gap-2 text-sm">
+                                      <span className="font-medium text-foreground w-16">{dayNames[s.day_of_week]}</span>
+                                      {s.departure_time && <><Clock className="w-3.5 h-3.5 text-muted-foreground" /><span className="text-muted-foreground">{s.departure_time?.slice(0, 5)}</span></>}
+                                      {s.return_time && <><ArrowRight className="w-3 h-3 text-muted-foreground" /><span className="text-muted-foreground">{s.return_time?.slice(0, 5)}</span></>}
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                                        <Users className="w-3 h-3 inline me-1" />{dayBookings.length}
+                                      </span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
                             </div>
+                            {/* Passenger list */}
+                            {routeBookings.length > 0 && (
+                              <div className="space-y-1.5">
+                                <p className="text-xs font-medium text-muted-foreground">
+                                  <Users className="w-3 h-3 inline me-1" />
+                                  {lang === 'ar' ? `إجمالي الركاب (${routeBookings.length})` : `Total Passengers (${routeBookings.length})`}
+                                </p>
+                                {routeBookings.slice(0, 5).map(b => {
+                                  const passenger = passengerProfiles[b.user_id];
+                                  return (
+                                    <div key={b.id} className="flex items-center justify-between bg-surface rounded-xl px-3 py-2">
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center"><User className="w-3.5 h-3.5 text-primary" /></div>
+                                        <div>
+                                          <p className="text-xs font-medium text-foreground">{passenger?.full_name || (lang === 'ar' ? 'راكب' : 'Rider')}</p>
+                                          <p className="text-[10px] text-muted-foreground">{dayNames[new Date(b.scheduled_date).getDay()]} · {b.scheduled_time?.slice(0, 5)} · {b.seats} {t('booking.seat')}</p>
+                                        </div>
+                                      </div>
+                                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${statusColors[b.status]}`}>{t(`booking.status.${b.status}`)}</span>
+                                    </div>
+                                  );
+                                })}
+                                {routeBookings.length > 5 && (
+                                  <p className="text-xs text-primary text-center cursor-pointer" onClick={() => setTab('trips')}>
+                                    +{routeBookings.length - 5} {lang === 'ar' ? 'المزيد' : 'more'}
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                            <Button variant="outline" size="sm" onClick={() => { setTab('schedule'); openScheduleForRoute(allRoutes.find(r => r.id === routeId) || routeInfo); }}>
+                              <Calendar className="w-3.5 h-3.5 me-1" />{lang === 'ar' ? 'تعديل الجدول' : 'Edit Schedule'}
+                            </Button>
                           </div>
                         );
                       })}
@@ -632,15 +667,35 @@ const DriverDashboard = () => {
                       </div>
                     </div>
 
+                    <div className="space-y-2">
+                      <Label>{lang === 'ar' ? 'نوع الرحلة' : 'Trip Type'}</Label>
+                      <div className="flex gap-2">
+                        {([
+                          { value: 'both', labelAr: 'ذهاب وعودة', labelEn: 'Both' },
+                          { value: 'go', labelAr: 'ذهاب فقط', labelEn: 'Going Only' },
+                          { value: 'return', labelAr: 'عودة فقط', labelEn: 'Return Only' },
+                        ] as const).map(opt => (
+                          <button key={opt.value} onClick={() => setScheduleForm(p => ({ ...p, trip_direction: opt.value }))}
+                            className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                              scheduleForm.trip_direction === opt.value ? 'bg-primary text-primary-foreground border-primary' : 'bg-background text-muted-foreground border-border'
+                            }`}>{lang === 'ar' ? opt.labelAr : opt.labelEn}</button>
+                        ))}
+                      </div>
+                    </div>
+
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <Label className="text-xs">{lang === 'ar' ? 'ذهاب' : 'Departure'}</Label>
-                        <Input type="time" value={scheduleForm.departure_time} onChange={e => setScheduleForm(p => ({ ...p, departure_time: e.target.value }))} />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">{lang === 'ar' ? 'عودة' : 'Return'}</Label>
-                        <Input type="time" value={scheduleForm.return_time} onChange={e => setScheduleForm(p => ({ ...p, return_time: e.target.value }))} />
-                      </div>
+                      {scheduleForm.trip_direction !== 'return' && (
+                        <div className="space-y-1">
+                          <Label className="text-xs">{lang === 'ar' ? 'ذهاب' : 'Departure'}</Label>
+                          <Input type="time" value={scheduleForm.departure_time} onChange={e => setScheduleForm(p => ({ ...p, departure_time: e.target.value }))} />
+                        </div>
+                      )}
+                      {scheduleForm.trip_direction !== 'go' && (
+                        <div className="space-y-1">
+                          <Label className="text-xs">{lang === 'ar' ? 'عودة' : 'Return'}</Label>
+                          <Input type="time" value={scheduleForm.return_time} onChange={e => setScheduleForm(p => ({ ...p, return_time: e.target.value }))} />
+                        </div>
+                      )}
                     </div>
 
                     <div className="space-y-1">
