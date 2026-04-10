@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { MapPin, Clock, Ticket, ChevronLeft, ChevronRight, MessageCircle, Navigation, Key, Star, Phone, Users, Timer } from 'lucide-react';
+import { MapPin, Clock, Ticket, ChevronLeft, ChevronRight, MessageCircle, Navigation, Key, Star, Phone, Users, Timer, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import RideChat from '@/components/RideChat';
 import RideRating from '@/components/RideRating';
@@ -237,6 +237,23 @@ const MyBookings = () => {
                       <p className="text-xs text-muted-foreground ms-auto max-w-[120px] text-end">
                         {lang === 'ar' ? 'أظهر هذا الرمز للسائق' : 'Show this to your driver'}
                       </p>
+                    </div>
+                  )}
+
+                  {/* Skipped notification */}
+                  {booking.skipped_at && (
+                    <div className="bg-destructive/10 rounded-lg p-3 mb-3 flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 text-destructive shrink-0" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-destructive">
+                          {lang === 'ar' ? 'تم تخطيك — لم تحضر في الوقت' : 'Skipped — No show at pickup'}
+                        </p>
+                        {booking.skip_refund_amount > 0 && (
+                          <p className="text-xs text-muted-foreground">
+                            {lang === 'ar' ? `سيتم استرداد ${booking.skip_refund_amount} جنيه (50%)` : `${booking.skip_refund_amount} EGP (50%) will be refunded`}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   )}
 

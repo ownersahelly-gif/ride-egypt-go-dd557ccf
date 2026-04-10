@@ -49,6 +49,7 @@ export type Database = {
           custom_pickup_lat: number | null
           custom_pickup_lng: number | null
           custom_pickup_name: string | null
+          driver_arrived_at: string | null
           dropoff_stop_id: string | null
           dropped_off_at: string | null
           id: string
@@ -59,6 +60,8 @@ export type Database = {
           scheduled_time: string
           seats: number
           shuttle_id: string | null
+          skip_refund_amount: number | null
+          skipped_at: string | null
           status: string
           total_price: number
           trip_direction: string
@@ -76,6 +79,7 @@ export type Database = {
           custom_pickup_lat?: number | null
           custom_pickup_lng?: number | null
           custom_pickup_name?: string | null
+          driver_arrived_at?: string | null
           dropoff_stop_id?: string | null
           dropped_off_at?: string | null
           id?: string
@@ -86,6 +90,8 @@ export type Database = {
           scheduled_time: string
           seats?: number
           shuttle_id?: string | null
+          skip_refund_amount?: number | null
+          skipped_at?: string | null
           status?: string
           total_price?: number
           trip_direction?: string
@@ -103,6 +109,7 @@ export type Database = {
           custom_pickup_lat?: number | null
           custom_pickup_lng?: number | null
           custom_pickup_name?: string | null
+          driver_arrived_at?: string | null
           dropoff_stop_id?: string | null
           dropped_off_at?: string | null
           id?: string
@@ -113,6 +120,8 @@ export type Database = {
           scheduled_time?: string
           seats?: number
           shuttle_id?: string | null
+          skip_refund_amount?: number | null
+          skipped_at?: string | null
           status?: string
           total_price?: number
           trip_direction?: string
