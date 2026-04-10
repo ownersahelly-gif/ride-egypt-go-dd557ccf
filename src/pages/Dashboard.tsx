@@ -223,20 +223,33 @@ const Dashboard = () => {
   };
 
   // Validate custom point
-  /** Find minimum distance (km) from a point to the route polyline */
-  const minDistanceToRouteKm = useCallback((point: { lat: number; lng: number }): number => {
-    if (!routeDirections) return 999;
-    const path = routeDirections.routes?.[0]?.overview_path;
-    if (!path || path.length === 0) return 999;
-    let minDist = Infinity;
-    for (const p of path) {
-      const dist = haversineDistanceKm(point, { lat: p.lat(), lng: p.lng() });
-      if (dist < minDist) minDist = dist;
+  /** Find minimum distance (km) from a point to the route - uses polyline if available, otherwise origin/dest */
+  const getDistanceToRoute = (point: { lat: number; lng: number }): number => {
+    // Try polyline path first
+    if (routeDirections) {
+      const path = routeDirections.routes?.[0]?.overview_path;
+      if (path && path.length > 0) {
+        let minDist = Infinity;
+        for (const p of path) {
+          const dist = haversineDistanceKm(point, { lat: p.lat(), lng: p.lng() });
+          if (dist < minDist) minDist = dist;
+        }
+        return minDist;
+      }
     }
-    return minDist;
-  }, [routeDirections]);
+    // Fallback: distance to nearest endpoint
+    if (selectedRide?.routes) {
+      const dToOrigin = haversineDistanceKm(point, { lat: selectedRide.routes.origin_lat, lng: selectedRide.routes.origin_lng });
+      const dToDest = haversineDistanceKm(point, { lat: selectedRide.routes.destination_lat, lng: selectedRide.routes.destination_lng });
+      return Math.min(dToOrigin, dToDest);
+    }
+    return 999;
+  };
 
   const MAX_DISTANCE_KM = 2;
+
+  // Store nearest route point for drawing connection line
+  const [nearestRoutePoint, setNearestRoutePoint] = useState<{ lat: number; lng: number } | null>(null);
 
   const validateCustomPoint = useCallback(async (
     point: { lat: number; lng: number; name: string },
@@ -250,9 +263,32 @@ const Dashboard = () => {
     setResult(null);
     setCustom(point);
 
-    const distKm = minDistanceToRouteKm(point);
+    // Calculate distance to route
+    const distKm = getDistanceToRoute(point);
+
+    // Find nearest point on route for visual line
+    let nearest: { lat: number; lng: number } | null = null;
+    if (routeDirections) {
+      const path = routeDirections.routes?.[0]?.overview_path;
+      if (path && path.length > 0) {
+        let minDist = Infinity;
+        for (const p of path) {
+          const d = haversineDistanceKm(point, { lat: p.lat(), lng: p.lng() });
+          if (d < minDist) { minDist = d; nearest = { lat: p.lat(), lng: p.lng() }; }
+        }
+      }
+    }
+    if (!nearest && selectedRide.routes) {
+      const dO = haversineDistanceKm(point, { lat: selectedRide.routes.origin_lat, lng: selectedRide.routes.origin_lng });
+      const dD = haversineDistanceKm(point, { lat: selectedRide.routes.destination_lat, lng: selectedRide.routes.destination_lng });
+      nearest = dO < dD
+        ? { lat: selectedRide.routes.origin_lat, lng: selectedRide.routes.origin_lng }
+        : { lat: selectedRide.routes.destination_lat, lng: selectedRide.routes.destination_lng };
+    }
+    setNearestRoutePoint(nearest);
+
     const ok = distKm <= MAX_DISTANCE_KM;
-    const onRoute = distKm <= 0.1; // within 100m counts as on-route
+    const onRoute = distKm <= 0.1;
     setResult({ ok, minutes: Math.round(distKm * 10) / 10, onRoute });
 
     if (!ok) {
@@ -263,9 +299,16 @@ const Dashboard = () => {
           : `This location is ${distKm.toFixed(1)} km from the route (max ${MAX_DISTANCE_KM} km)`,
         variant: 'destructive',
       });
+    } else {
+      toast({
+        title: lang === 'ar' ? '✅ موقع مقبول' : '✅ Location accepted',
+        description: lang === 'ar'
+          ? `يبعد ${distKm.toFixed(1)} كم عن المسار`
+          : `${distKm.toFixed(1)} km from route`,
+      });
     }
     setValidating(false);
-  }, [selectedRide, minDistanceToRouteKm, lang, toast]);
+  }, [selectedRide, routeDirections, lang, toast]);
 
   const handleMapClick = useCallback((lat: number, lng: number) => {
     if (step !== 'details') return;
