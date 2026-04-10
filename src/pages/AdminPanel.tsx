@@ -30,6 +30,12 @@ const AdminPanel = () => {
   const [instapayPhone, setInstapayPhone] = useState('');
   const [savingPhone, setSavingPhone] = useState(false);
 
+  // Bundle management
+  const [bundles, setBundles] = useState<any[]>([]);
+  const [showBundleForm, setShowBundleForm] = useState(false);
+  const [bundleForm, setBundleForm] = useState({ route_id: '', bundle_type: 'weekly', ride_count: 10, price: 200, discount_percentage: 15 });
+  const [savingBundle, setSavingBundle] = useState(false);
+
   // Data states
   const [routes, setRoutes] = useState<any[]>([]);
   const [applications, setApplications] = useState<any[]>([]);
