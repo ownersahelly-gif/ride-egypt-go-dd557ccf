@@ -60,6 +60,10 @@ const DriverDashboard = () => {
   });
   const [savingRouteRequest, setSavingRouteRequest] = useState(false);
   const [pickingLocation, setPickingLocation] = useState<'origin' | 'destination' | null>(null);
+  const [quickAddDay, setQuickAddDay] = useState<{ routeId: string; day: number; shuttleId: string } | null>(null);
+  const [quickAddTime, setQuickAddTime] = useState('12:00');
+  const [quickAddDir, setQuickAddDir] = useState<'go' | 'return'>('go');
+  const [savingQuickAdd, setSavingQuickAdd] = useState(false);
 
   const { newBookingsCount, acknowledge: ackBookings } = useDriverBookingNotifications(shuttle?.id || null);
 
