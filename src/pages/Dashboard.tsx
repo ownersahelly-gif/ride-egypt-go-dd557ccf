@@ -87,10 +87,28 @@ const Dashboard = () => {
   const [instapayPhone, setInstapayPhone] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
+  const [drivingDistanceKm, setDrivingDistanceKm] = useState<number | null>(null);
 
-  // Estimated price from pickup/dropoff distance
-  const estimatedPrice = pickup && dropoff
-    ? Math.max(10, Math.round(haversineDistanceKm(pickup, dropoff) * pricePerKm))
+  // Compute real driving distance between pickup & dropoff
+  useEffect(() => {
+    if (!pickup || !dropoff) { setDrivingDistanceKm(null); return; }
+    if (typeof google === 'undefined' || !google?.maps?.DirectionsService) {
+      setDrivingDistanceKm(haversineDistanceKm(pickup, dropoff));
+      return;
+    }
+    const ds = new google.maps.DirectionsService();
+    ds.route({ origin: pickup, destination: dropoff, travelMode: google.maps.TravelMode.DRIVING }, (res, status) => {
+      if (status === 'OK' && res?.routes?.[0]?.legs?.[0]?.distance?.value) {
+        setDrivingDistanceKm(res.routes[0].legs[0].distance.value / 1000);
+      } else {
+        setDrivingDistanceKm(haversineDistanceKm(pickup, dropoff));
+      }
+    });
+  }, [pickup?.lat, pickup?.lng, dropoff?.lat, dropoff?.lng]);
+
+  // Estimated price from real driving distance
+  const estimatedPrice = drivingDistanceKm !== null
+    ? Math.max(10, Math.round(drivingDistanceKm * pricePerKm))
     : null;
 
   // Fetch user profile, roles, settings
@@ -345,19 +363,32 @@ const Dashboard = () => {
   const isPickupValid = pickupMode === 'start' ? true : (!!customPickup && pickupResult?.ok === true);
   const isDropoffValid = dropoffMode === 'end' ? true : (!!customDropoff && dropoffResult?.ok === true);
 
-  // Dynamic price calculation using price_per_km
-  const calcDynamicPrice = useCallback(() => {
-    if (!selectedRide?.routes) return 0;
+  // Dynamic price calculation using real driving distance
+  const [detailDrivingDistKm, setDetailDrivingDistKm] = useState<number | null>(null);
+  useEffect(() => {
+    if (!selectedRide?.routes) { setDetailDrivingDistKm(null); return; }
     const route = selectedRide.routes;
     const pLat = pickupMode === 'start' ? route.origin_lat : (customPickup?.lat ?? route.origin_lat);
     const pLng = pickupMode === 'start' ? route.origin_lng : (customPickup?.lng ?? route.origin_lng);
     const dLat = dropoffMode === 'end' ? route.destination_lat : (customDropoff?.lat ?? route.destination_lat);
     const dLng = dropoffMode === 'end' ? route.destination_lng : (customDropoff?.lng ?? route.destination_lng);
-    const distKm = haversineDistanceKm({ lat: pLat, lng: pLng }, { lat: dLat, lng: dLng });
-    return Math.max(10, Math.round(distKm * pricePerKm));
-  }, [selectedRide, pickupMode, dropoffMode, customPickup, customDropoff, pricePerKm]);
+    const from = { lat: pLat, lng: pLng };
+    const to = { lat: dLat, lng: dLng };
+    if (typeof google === 'undefined' || !google?.maps?.DirectionsService) {
+      setDetailDrivingDistKm(haversineDistanceKm(from, to));
+      return;
+    }
+    const ds = new google.maps.DirectionsService();
+    ds.route({ origin: from, destination: to, travelMode: google.maps.TravelMode.DRIVING }, (res, status) => {
+      if (status === 'OK' && res?.routes?.[0]?.legs?.[0]?.distance?.value) {
+        setDetailDrivingDistKm(res.routes[0].legs[0].distance.value / 1000);
+      } else {
+        setDetailDrivingDistKm(haversineDistanceKm(from, to));
+      }
+    });
+  }, [selectedRide?.route_id, pickupMode, dropoffMode, customPickup?.lat, customPickup?.lng, customDropoff?.lat, customDropoff?.lng]);
 
-  const dynamicPrice = calcDynamicPrice();
+  const dynamicPrice = detailDrivingDistKm !== null ? Math.max(10, Math.round(detailDrivingDistKm * pricePerKm)) : 0;
 
   const isRideFull = selectedRide?.available_seats === 0;
   const isNearbyMode = pickupMode === 'nearby' || dropoffMode === 'nearby';
@@ -797,10 +828,7 @@ const Dashboard = () => {
                       </div>
                       <div className="text-end">
                         <span className="text-lg font-bold text-primary">
-                          {Math.max(10, Math.round(haversineDistanceKm(
-                            pickup!,
-                            dropoff!
-                          ) * pricePerKm))} EGP
+                          {estimatedPrice ?? '...'} EGP
                         </span>
                       </div>
                     </div>
