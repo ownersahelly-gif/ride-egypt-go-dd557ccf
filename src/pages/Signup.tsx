@@ -21,11 +21,13 @@ const FileUploadField = ({
   value,
   onChange,
   required = true,
+  accept = 'image/*',
 }: {
   label: string;
   value: UploadedFile | null;
   onChange: (f: UploadedFile | null) => void;
   required?: boolean;
+  accept?: string;
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -39,7 +41,7 @@ const FileUploadField = ({
   return (
     <div className="space-y-2">
       <Label>{label} {required && <span className="text-destructive">*</span>}</Label>
-      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+      <input ref={inputRef} type="file" accept={accept} className="hidden" onChange={handleFile} />
       {value ? (
         <div className="relative border border-border rounded-xl overflow-hidden">
           <img src={value.preview} alt={label} className="w-full h-32 object-cover" />
@@ -64,14 +66,20 @@ const FileUploadField = ({
           className="w-full border-2 border-dashed border-border rounded-xl p-6 flex flex-col items-center gap-2 hover:border-primary/40 hover:bg-primary/5 transition-all"
         >
           <Upload className="w-6 h-6 text-muted-foreground" />
-          <span className="text-sm text-muted-foreground">
-            {label}
-          </span>
+          <span className="text-sm text-muted-foreground">{label}</span>
         </button>
       )}
     </div>
   );
 };
+
+const StepIndicator = ({ current, total }: { current: number; total: number }) => (
+  <div className="flex items-center justify-center gap-2 mb-6">
+    {Array.from({ length: total }, (_, i) => (
+      <div key={i} className={`h-2 rounded-full transition-all ${i + 1 === current ? 'w-8 bg-primary' : i + 1 < current ? 'w-8 bg-primary/40' : 'w-8 bg-border'}`} />
+    ))}
+  </div>
+);
 
 const Signup = () => {
   const { signUp } = useAuth();
@@ -79,6 +87,7 @@ const Signup = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [role, setRole] = useState<UserRole | null>(null);
+  const [driverStep, setDriverStep] = useState(1);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -86,16 +95,24 @@ const Signup = () => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  // Driver documents
+  // Driver photos
+  const [facePhoto, setFacePhoto] = useState<UploadedFile | null>(null);
   const [idFront, setIdFront] = useState<UploadedFile | null>(null);
   const [idBack, setIdBack] = useState<UploadedFile | null>(null);
   const [drivingLicense, setDrivingLicense] = useState<UploadedFile | null>(null);
   const [carLicense, setCarLicense] = useState<UploadedFile | null>(null);
-  const [criminalRecord, setCriminalRecord] = useState<UploadedFile | null>(null);
+
+  // Car details
+  const [carBrand, setCarBrand] = useState('');
+  const [carModel, setCarModel] = useState('');
+  const [carYear, setCarYear] = useState('');
+  const [carPhoto, setCarPhoto] = useState<UploadedFile | null>(null);
+  const [licenseNumber, setLicenseNumber] = useState('');
   const [wasUber, setWasUber] = useState(false);
   const [uberProof, setUberProof] = useState<UploadedFile | null>(null);
 
   const Arrow = lang === 'ar' ? ArrowLeft : ArrowRight;
+  const BackArrow = lang === 'ar' ? ArrowRight : ArrowLeft;
 
   const uploadFile = async (userId: string, file: File, folder: string): Promise<string> => {
     const ext = file.name.split('.').pop();
@@ -106,128 +123,45 @@ const Signup = () => {
     return data.publicUrl;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleRiderSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password.length < 6) {
       toast({ title: t('auth.error'), description: t('auth.passwordMin'), variant: 'destructive' });
       return;
     }
-    if (role === 'driver') {
-      if (!idFront || !idBack || !drivingLicense || !carLicense || !criminalRecord) {
-        toast({
-          title: t('auth.error'),
-          description: lang === 'ar' ? 'يرجى رفع جميع المستندات المطلوبة' : 'Please upload all required documents',
-          variant: 'destructive',
-        });
-        return;
-      }
-      if (wasUber && !uberProof) {
-        toast({
-          title: t('auth.error'),
-          description: lang === 'ar' ? 'يرجى رفع إثبات العمل في أوبر' : 'Please upload Uber proof document',
-          variant: 'destructive',
-        });
-        return;
-      }
-    }
-
     setLoading(true);
     try {
       const signUpData = await signUp(email, password, fullName);
       const userId = signUpData?.user?.id;
-      if (!userId) throw new Error('Signup failed - no user ID returned');
+      if (!userId) throw new Error('Signup failed');
 
-      // Try to get a session (works if email confirmation is disabled)
       let hasSession = !!signUpData?.session;
       if (!hasSession) {
-        // Try signing in (works if email confirmation is disabled)
         try {
           await supabase.auth.signInWithPassword({ email, password });
           const { data: { session } } = await supabase.auth.getSession();
           hasSession = !!session;
-        } catch {
-          // Email confirmation likely required - continue with service-level uploads
-        }
+        } catch {}
       }
 
-      // Update profile with phone and user_type
       if (hasSession) {
         await supabase.from('profiles').update({
-          user_type: role === 'driver' ? 'driver' as const : 'customer' as const,
+          user_type: 'customer' as const,
           ...(phone ? { phone } : {}),
         }).eq('user_id', userId);
       }
 
-      if (role === 'driver') {
-        if (hasSession) {
-          // Upload all documents (requires auth)
-          const [idFrontUrl, idBackUrl, drivingLicenseUrl, carLicenseUrl, criminalRecordUrl] = await Promise.all([
-            uploadFile(userId, idFront!.file, 'id_front'),
-            uploadFile(userId, idBack!.file, 'id_back'),
-            uploadFile(userId, drivingLicense!.file, 'driving_license'),
-            uploadFile(userId, carLicense!.file, 'car_license'),
-            uploadFile(userId, criminalRecord!.file, 'criminal_record'),
-          ]);
-
-          let uberProofUrl = null;
-          if (wasUber && uberProof) {
-            uberProofUrl = await uploadFile(userId, uberProof.file, 'uber_proof');
-          }
-
-          await supabase.from('driver_applications').insert({
-            user_id: userId,
-            license_number: 'See uploaded documents',
-            vehicle_model: lang === 'ar' ? 'في انتظار المراجعة' : 'Pending review',
-            vehicle_plate: 'See uploaded documents',
-            vehicle_year: new Date().getFullYear(),
-            phone,
-            id_front_url: idFrontUrl,
-            id_back_url: idBackUrl,
-            driving_license_url: drivingLicenseUrl,
-            car_license_url: carLicenseUrl,
-            criminal_record_url: criminalRecordUrl,
-            was_uber_driver: wasUber,
-            uber_proof_url: uberProofUrl,
-            notes: wasUber
-              ? (lang === 'ar' ? 'سائق أوبر سابق - أولوية في المراجعة' : 'Former Uber driver - priority review')
-              : null,
-          });
-
-          toast({
-            title: lang === 'ar' ? 'تم إرسال طلبك!' : 'Application Submitted!',
-            description: lang === 'ar'
-              ? 'سيراجع الأدمن طلبك وسيتم إبلاغك بالقبول'
-              : 'Admin will review your documents and notify you of acceptance',
-          });
-        } else {
-          // No session - email confirmation required
-          toast({
-            title: lang === 'ar' ? 'تم إنشاء حسابك!' : 'Account Created!',
-            description: lang === 'ar'
-              ? 'يرجى تأكيد بريدك الإلكتروني ثم سجل الدخول لرفع مستنداتك كسائق'
-              : 'Please confirm your email, then log in to upload your driver documents',
-          });
-          navigate('/login');
-          return;
-        }
-      } else {
-        if (!hasSession) {
-          toast({
-            title: lang === 'ar' ? 'تم إنشاء حسابك!' : 'Account Created!',
-            description: lang === 'ar'
-              ? 'يرجى تأكيد بريدك الإلكتروني ثم سجل الدخول'
-              : 'Please confirm your email, then log in',
-          });
-          navigate('/login');
-          return;
-        }
+      if (!hasSession) {
         toast({
-          title: t('auth.success'),
-          description: lang === 'ar' ? 'تم إنشاء حسابك بنجاح' : 'Account created successfully',
+          title: lang === 'ar' ? 'تم إنشاء حسابك!' : 'Account Created!',
+          description: lang === 'ar' ? 'يرجى تأكيد بريدك الإلكتروني ثم سجل الدخول' : 'Please confirm your email, then log in',
         });
+        navigate('/login');
+        return;
       }
 
-      navigate(role === 'driver' ? '/driver-dashboard' : '/dashboard');
+      toast({ title: t('auth.success'), description: lang === 'ar' ? 'تم إنشاء حسابك بنجاح' : 'Account created successfully' });
+      navigate('/dashboard');
     } catch (error: any) {
       toast({ title: t('auth.error'), description: error.message, variant: 'destructive' });
     } finally {
@@ -235,7 +169,114 @@ const Signup = () => {
     }
   };
 
-  // Step 1: Role selection
+  const handleDriverSubmit = async () => {
+    // Validate step 3
+    if (!carBrand || !carModel || !carYear || !licenseNumber) {
+      toast({ title: t('auth.error'), description: lang === 'ar' ? 'يرجى ملء جميع حقول السيارة' : 'Please fill all car fields', variant: 'destructive' });
+      return;
+    }
+    if (!carPhoto) {
+      toast({ title: t('auth.error'), description: lang === 'ar' ? 'يرجى رفع صورة السيارة' : 'Please upload a car photo', variant: 'destructive' });
+      return;
+    }
+    if (wasUber && !uberProof) {
+      toast({ title: t('auth.error'), description: lang === 'ar' ? 'يرجى رفع إثبات العمل في أوبر' : 'Please upload Uber/Careem proof', variant: 'destructive' });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Create account with email = phone@massar.app (no email needed for drivers)
+      const driverEmail = `${phone.replace(/[^0-9]/g, '')}@driver.massar.app`;
+      const signUpData = await signUp(driverEmail, password, fullName);
+      const userId = signUpData?.user?.id;
+      if (!userId) throw new Error('Signup failed');
+
+      let hasSession = !!signUpData?.session;
+      if (!hasSession) {
+        try {
+          await supabase.auth.signInWithPassword({ email: driverEmail, password });
+          const { data: { session } } = await supabase.auth.getSession();
+          hasSession = !!session;
+        } catch {}
+      }
+
+      if (hasSession) {
+        await supabase.from('profiles').update({
+          user_type: 'driver' as const,
+          phone,
+        }).eq('user_id', userId);
+
+        // Upload all documents
+        const uploads = await Promise.all([
+          facePhoto ? uploadFile(userId, facePhoto.file, 'face_photo') : null,
+          idFront ? uploadFile(userId, idFront.file, 'id_front') : null,
+          idBack ? uploadFile(userId, idBack.file, 'id_back') : null,
+          drivingLicense ? uploadFile(userId, drivingLicense.file, 'driving_license') : null,
+          carLicense ? uploadFile(userId, carLicense.file, 'car_license') : null,
+          carPhoto ? uploadFile(userId, carPhoto.file, 'car_photo') : null,
+          wasUber && uberProof ? uploadFile(userId, uberProof.file, 'uber_proof') : null,
+        ]);
+
+        await supabase.from('driver_applications').insert({
+          user_id: userId,
+          license_number: licenseNumber,
+          vehicle_model: `${carBrand} ${carModel}`,
+          vehicle_plate: 'Pending',
+          vehicle_year: parseInt(carYear),
+          phone,
+          id_front_url: uploads[1],
+          id_back_url: uploads[2],
+          driving_license_url: uploads[3],
+          car_license_url: uploads[4],
+          criminal_record_url: uploads[0], // face photo stored here
+          was_uber_driver: wasUber,
+          uber_proof_url: uploads[6],
+          notes: wasUber
+            ? (lang === 'ar' ? 'سائق أوبر/كريم سابق' : 'Former Uber/Careem driver')
+            : null,
+        });
+
+        toast({
+          title: lang === 'ar' ? 'تم إرسال طلبك!' : 'Application Submitted!',
+          description: lang === 'ar' ? 'سيراجع الأدمن طلبك وسيتم إبلاغك بالقبول' : 'Admin will review your application and notify you',
+        });
+        navigate('/driver-dashboard');
+      } else {
+        toast({
+          title: lang === 'ar' ? 'تم إنشاء حسابك!' : 'Account Created!',
+          description: lang === 'ar' ? 'يرجى تأكيد بريدك الإلكتروني' : 'Please confirm your email, then log in',
+        });
+        navigate('/login');
+      }
+    } catch (error: any) {
+      toast({ title: t('auth.error'), description: error.message, variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const validateDriverStep1 = () => {
+    if (!fullName || !phone || !password) {
+      toast({ title: t('auth.error'), description: lang === 'ar' ? 'يرجى ملء جميع الحقول' : 'Please fill all fields', variant: 'destructive' });
+      return false;
+    }
+    if (password.length < 6) {
+      toast({ title: t('auth.error'), description: t('auth.passwordMin'), variant: 'destructive' });
+      return false;
+    }
+    return true;
+  };
+
+  const validateDriverStep2 = () => {
+    if (!facePhoto || !idFront || !idBack || !drivingLicense || !carLicense) {
+      toast({ title: t('auth.error'), description: lang === 'ar' ? 'يرجى رفع جميع الصور المطلوبة' : 'Please upload all required photos', variant: 'destructive' });
+      return false;
+    }
+    return true;
+  };
+
+  // Step 0: Role selection
   if (!role) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-surface px-4">
@@ -282,7 +323,7 @@ const Signup = () => {
                   {lang === 'ar' ? 'سائق - أريد العمل كسائق' : 'Driver - I want to drive'}
                 </h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  {lang === 'ar' ? 'انضم كسائق واكسب مع مسار (يتطلب موافقة الأدمن)' : 'Join as a driver and earn with Massar (requires admin approval)'}
+                  {lang === 'ar' ? 'انضم كسائق واكسب مع مسار' : 'Join as a driver and earn with Massar'}
                 </p>
               </div>
             </button>
@@ -297,88 +338,156 @@ const Signup = () => {
     );
   }
 
-  // Step 2: Registration form
+  // Rider: simple form
+  if (role === 'rider') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-surface px-4 py-8">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-6">
+            <Link to="/" className="text-3xl font-bold text-primary font-arabic">
+              {lang === 'ar' ? 'مسار' : 'Massar'}
+            </Link>
+            <h1 className="text-2xl font-bold text-foreground mt-4">
+              {lang === 'ar' ? 'إنشاء حساب راكب' : 'Create Rider Account'}
+            </h1>
+          </div>
+
+          <form onSubmit={handleRiderSubmit} className="bg-card rounded-2xl shadow-card p-6 space-y-4">
+            <button type="button" onClick={() => setRole(null)} className="text-sm text-primary hover:underline flex items-center gap-1">
+              <BackArrow className="w-4 h-4" />
+              {lang === 'ar' ? 'تغيير نوع الحساب' : 'Change account type'}
+            </button>
+
+            <div className="space-y-2">
+              <Label>{t('auth.fullName')}</Label>
+              <div className="relative">
+                <User className="absolute start-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input placeholder={t('auth.fullNamePlaceholder')} className="ps-10" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>{lang === 'ar' ? 'رقم الهاتف' : 'Phone Number'}</Label>
+              <div className="relative">
+                <Phone className="absolute start-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input type="tel" placeholder="01xxxxxxxxx" className="ps-10" value={phone} onChange={(e) => setPhone(e.target.value)} required />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>{t('auth.email')}</Label>
+              <div className="relative">
+                <Mail className="absolute start-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input type="email" placeholder="name@example.com" className="ps-10" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>{t('auth.password')}</Label>
+              <div className="relative">
+                <Lock className="absolute start-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input type={showPassword ? 'text' : 'password'} placeholder="••••••••" className="ps-10 pe-10" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute end-3 top-3 text-muted-foreground hover:text-foreground">
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+
+            <Button type="submit" className="w-full gap-2" size="lg" disabled={loading}>
+              {loading ? (lang === 'ar' ? 'جاري التسجيل...' : 'Creating account...') : t('auth.signup')}
+              <Arrow className="w-4 h-4" />
+            </Button>
+
+            <p className="text-center text-sm text-muted-foreground">
+              {t('auth.hasAccount')}{' '}
+              <Link to="/login" className="text-primary font-medium hover:underline">{t('auth.loginLink')}</Link>
+            </p>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  // Driver: multi-step form
   return (
     <div className="min-h-screen flex items-center justify-center bg-surface px-4 py-8">
       <div className="w-full max-w-md">
-        <div className="text-center mb-6">
+        <div className="text-center mb-4">
           <Link to="/" className="text-3xl font-bold text-primary font-arabic">
             {lang === 'ar' ? 'مسار' : 'Massar'}
           </Link>
           <h1 className="text-2xl font-bold text-foreground mt-4">
-            {role === 'driver'
-              ? (lang === 'ar' ? 'تسجيل كسائق' : 'Sign Up as Driver')
-              : (lang === 'ar' ? 'إنشاء حساب راكب' : 'Create Rider Account')}
+            {lang === 'ar' ? 'تسجيل كسائق' : 'Sign Up as Driver'}
           </h1>
-          {role === 'driver' && (
-            <p className="text-sm text-muted-foreground mt-2">
-              {lang === 'ar' ? 'سيتم مراجعة طلبك من قبل الإدارة' : 'Your application will be reviewed by admin'}
-            </p>
-          )}
+          <p className="text-sm text-muted-foreground mt-1">
+            {driverStep === 1 && (lang === 'ar' ? 'المعلومات الأساسية' : 'Basic Information')}
+            {driverStep === 2 && (lang === 'ar' ? 'الصور والمستندات' : 'Photos & Documents')}
+            {driverStep === 3 && (lang === 'ar' ? 'معلومات السيارة' : 'Car Information')}
+          </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-card rounded-2xl shadow-card p-6 space-y-4">
+        <StepIndicator current={driverStep} total={3} />
+
+        <div className="bg-card rounded-2xl shadow-card p-6 space-y-4">
           <button
             type="button"
-            onClick={() => setRole(null)}
+            onClick={() => {
+              if (driverStep === 1) setRole(null);
+              else setDriverStep(driverStep - 1);
+            }}
             className="text-sm text-primary hover:underline flex items-center gap-1"
           >
-            {lang === 'ar' ? <ArrowRight className="w-4 h-4" /> : <ArrowLeft className="w-4 h-4" />}
-            {lang === 'ar' ? 'تغيير نوع الحساب' : 'Change account type'}
+            <BackArrow className="w-4 h-4" />
+            {driverStep === 1
+              ? (lang === 'ar' ? 'تغيير نوع الحساب' : 'Change account type')
+              : (lang === 'ar' ? 'الخطوة السابقة' : 'Previous step')}
           </button>
 
-          {/* Basic Info */}
-          <div className="space-y-2">
-            <Label htmlFor="name">{t('auth.fullName')}</Label>
-            <div className="relative">
-              <User className="absolute start-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input id="name" placeholder={t('auth.fullNamePlaceholder')} className="ps-10"
-                value={fullName} onChange={(e) => setFullName(e.target.value)} required />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="phone">{lang === 'ar' ? 'رقم الهاتف' : 'Phone Number'}</Label>
-            <div className="relative">
-              <Phone className="absolute start-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input id="phone" type="tel" placeholder="01xxxxxxxxx" className="ps-10"
-                value={phone} onChange={(e) => setPhone(e.target.value)} required />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="email">{t('auth.email')}</Label>
-            <div className="relative">
-              <Mail className="absolute start-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input id="email" type="email" placeholder="name@example.com" className="ps-10"
-                value={email} onChange={(e) => setEmail(e.target.value)} required />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="password">{t('auth.password')}</Label>
-            <div className="relative">
-              <Lock className="absolute start-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input id="password" type={showPassword ? 'text' : 'password'} placeholder="••••••••" className="ps-10 pe-10"
-                value={password} onChange={(e) => setPassword(e.target.value)} required />
-              <button type="button" onClick={() => setShowPassword(!showPassword)}
-                className="absolute end-3 top-3 text-muted-foreground hover:text-foreground">
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            </div>
-          </div>
-
-          {/* Driver Documents */}
-          {role === 'driver' && (
+          {/* Step 1: Name, Phone, Password */}
+          {driverStep === 1 && (
             <>
-              <div className="border-t border-border pt-4">
-                <p className="text-sm font-semibold text-foreground mb-1">
-                  {lang === 'ar' ? 'المستندات المطلوبة' : 'Required Documents'}
-                </p>
-                <p className="text-xs text-muted-foreground mb-4">
-                  {lang === 'ar' ? 'ارفع صور واضحة لجميع المستندات' : 'Upload clear photos of all documents'}
-                </p>
+              <div className="space-y-2">
+                <Label>{t('auth.fullName')}</Label>
+                <div className="relative">
+                  <User className="absolute start-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input placeholder={t('auth.fullNamePlaceholder')} className="ps-10" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+                </div>
               </div>
+
+              <div className="space-y-2">
+                <Label>{lang === 'ar' ? 'رقم الهاتف' : 'Phone Number'}</Label>
+                <div className="relative">
+                  <Phone className="absolute start-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input type="tel" placeholder="01xxxxxxxxx" className="ps-10" value={phone} onChange={(e) => setPhone(e.target.value)} required />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>{t('auth.password')}</Label>
+                <div className="relative">
+                  <Lock className="absolute start-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input type={showPassword ? 'text' : 'password'} placeholder="••••••••" className="ps-10 pe-10" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute end-3 top-3 text-muted-foreground hover:text-foreground">
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <Button type="button" className="w-full gap-2" size="lg" onClick={() => { if (validateDriverStep1()) setDriverStep(2); }}>
+                {lang === 'ar' ? 'التالي' : 'Next'}
+                <Arrow className="w-4 h-4" />
+              </Button>
+            </>
+          )}
+
+          {/* Step 2: Face photo, ID, Driving License, Car License */}
+          {driverStep === 2 && (
+            <>
+              <FileUploadField
+                label={lang === 'ar' ? 'صورة شخصية واضحة (وجهك)' : 'Clear face photo (selfie)'}
+                value={facePhoto}
+                onChange={setFacePhoto}
+              />
 
               <FileUploadField
                 label={lang === 'ar' ? 'صورة البطاقة (الوجه الأمامي)' : 'ID Card (Front)'}
@@ -404,13 +513,43 @@ const Signup = () => {
                 onChange={setCarLicense}
               />
 
+              <Button type="button" className="w-full gap-2" size="lg" onClick={() => { if (validateDriverStep2()) setDriverStep(3); }}>
+                {lang === 'ar' ? 'التالي' : 'Next'}
+                <Arrow className="w-4 h-4" />
+              </Button>
+            </>
+          )}
+
+          {/* Step 3: Car details + Uber/Careem */}
+          {driverStep === 3 && (
+            <>
+              <div className="space-y-2">
+                <Label>{lang === 'ar' ? 'ماركة السيارة' : 'Car Brand'}</Label>
+                <Input placeholder={lang === 'ar' ? 'مثال: تويوتا' : 'e.g. Toyota'} value={carBrand} onChange={(e) => setCarBrand(e.target.value)} required />
+              </div>
+
+              <div className="space-y-2">
+                <Label>{lang === 'ar' ? 'موديل السيارة' : 'Car Model'}</Label>
+                <Input placeholder={lang === 'ar' ? 'مثال: هايس' : 'e.g. HiAce'} value={carModel} onChange={(e) => setCarModel(e.target.value)} required />
+              </div>
+
+              <div className="space-y-2">
+                <Label>{lang === 'ar' ? 'سنة الصنع' : 'Year of Make'}</Label>
+                <Input type="number" placeholder="2020" value={carYear} onChange={(e) => setCarYear(e.target.value)} required />
+              </div>
+
               <FileUploadField
-                label={lang === 'ar' ? 'شهادة الفيش والتشبيه (السجل الجنائي)' : 'Criminal Record Certificate'}
-                value={criminalRecord}
-                onChange={setCriminalRecord}
+                label={lang === 'ar' ? 'صورة السيارة' : 'Car Photo'}
+                value={carPhoto}
+                onChange={setCarPhoto}
               />
 
-              {/* Uber Question */}
+              <div className="space-y-2">
+                <Label>{lang === 'ar' ? 'رقم الرخصة' : 'License Number'}</Label>
+                <Input placeholder={lang === 'ar' ? 'رقم رخصة القيادة' : 'Driving license number'} value={licenseNumber} onChange={(e) => setLicenseNumber(e.target.value)} required />
+              </div>
+
+              {/* Uber/Careem */}
               <div className="border-t border-border pt-4">
                 <div className="flex items-center gap-3">
                   <input
@@ -424,46 +563,40 @@ const Signup = () => {
                     className="w-5 h-5 rounded border-border text-primary focus:ring-primary"
                   />
                   <Label htmlFor="wasUber" className="cursor-pointer text-sm">
-                    {lang === 'ar' ? 'هل كنت تعمل في أوبر/كريم سابقاً؟' : 'Were you previously working with Uber/Careem?'}
+                    {lang === 'ar' ? 'هل كنت تعمل في أوبر/كريم سابقاً؟' : 'Were you previously with Uber/Careem?'}
                   </Label>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1 ms-8">
-                  {lang === 'ar' ? 'إضافة إثبات يسرّع عملية قبول طلبك' : 'Adding proof will fast-track your acceptance'}
+                  {lang === 'ar' ? 'إضافة إثبات يسرّع قبول طلبك' : 'Adding proof fast-tracks your acceptance'}
                 </p>
               </div>
 
               {wasUber && (
                 <FileUploadField
-                  label={lang === 'ar' ? 'إثبات العمل في أوبر/كريم (لقطة شاشة أو مستند)' : 'Uber/Careem proof (screenshot or document)'}
+                  label={lang === 'ar' ? 'إثبات العمل في أوبر/كريم' : 'Uber/Careem proof (screenshot)'}
                   value={uberProof}
                   onChange={setUberProof}
                 />
               )}
+
+              <Button type="button" className="w-full gap-2" size="lg" disabled={loading} onClick={handleDriverSubmit}>
+                {loading ? (lang === 'ar' ? 'جاري الإرسال...' : 'Submitting...') : (lang === 'ar' ? 'إرسال طلب التسجيل' : 'Submit Application')}
+                <Arrow className="w-4 h-4" />
+              </Button>
+
+              <p className="text-xs text-center text-muted-foreground">
+                {lang === 'ar'
+                  ? 'بالضغط على إرسال، سيتم إنشاء حسابك ومراجعة طلبك من قبل الإدارة'
+                  : 'By submitting, your account will be created and your application reviewed by admin'}
+              </p>
             </>
-          )}
-
-          <Button type="submit" className="w-full gap-2" size="lg" disabled={loading}>
-            {loading
-              ? (lang === 'ar' ? 'جاري التسجيل...' : 'Submitting...')
-              : role === 'driver'
-                ? (lang === 'ar' ? 'إرسال طلب التسجيل' : 'Submit Application')
-                : t('auth.signup')}
-            <Arrow className="w-4 h-4" />
-          </Button>
-
-          {role === 'driver' && (
-            <p className="text-xs text-center text-muted-foreground">
-              {lang === 'ar'
-                ? 'بالضغط على إرسال، سيتم إنشاء حسابك ومراجعة طلبك من قبل الإدارة'
-                : 'By submitting, your account will be created and your application reviewed by admin'}
-            </p>
           )}
 
           <p className="text-center text-sm text-muted-foreground">
             {t('auth.hasAccount')}{' '}
             <Link to="/login" className="text-primary font-medium hover:underline">{t('auth.loginLink')}</Link>
           </p>
-        </form>
+        </div>
       </div>
     </div>
   );
