@@ -95,7 +95,18 @@ const ActiveRide = () => {
 
     if (!chosenShuttle) { setLoading(false); return; }
     setShuttle(chosenShuttle);
-    setRoute(chosenShuttle.routes);
+
+    // Get route: from shuttle relation, or fallback to booking's route
+    let routeData = chosenShuttle.routes;
+    if (!routeData && bks.length > 0 && bks[0].route_id) {
+      const { data: fallbackRoute } = await supabase
+        .from('routes')
+        .select('*')
+        .eq('id', bks[0].route_id)
+        .maybeSingle();
+      routeData = fallbackRoute;
+    }
+    setRoute(routeData);
     setBookings(bks);
 
     const userIds = [...new Set(bks.map(b => b.user_id))];
