@@ -554,11 +554,11 @@ const AdminPanel = () => {
                     </p>
                     <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
                       {[
+                        { url: app.criminal_record_url, label: lang === 'ar' ? 'صورة الوجه' : 'Face Photo' },
                         { url: app.id_front_url, label: lang === 'ar' ? 'بطاقة أمام' : 'ID Front' },
                         { url: app.id_back_url, label: lang === 'ar' ? 'بطاقة خلف' : 'ID Back' },
                         { url: app.driving_license_url, label: lang === 'ar' ? 'رخصة قيادة' : 'License' },
                         { url: app.car_license_url, label: lang === 'ar' ? 'رخصة سيارة' : 'Car License' },
-                        { url: app.criminal_record_url, label: lang === 'ar' ? 'فيش' : 'Criminal Rec.' },
                       ].filter(d => d.url).map((doc, i) => (
                         <a key={i} href={doc.url} target="_blank" rel="noopener noreferrer"
                           className="block border border-border rounded-lg overflow-hidden hover:border-primary transition-colors group">
