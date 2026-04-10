@@ -21,6 +21,7 @@ interface MapViewProps {
   onMapClick?: (lat: number, lng: number) => void;
   showUserLocation?: boolean;
   connectionLine?: { from: { lat: number; lng: number }; to: { lat: number; lng: number }; color?: string } | null;
+  connectionLines?: { from: { lat: number; lng: number }; to: { lat: number; lng: number }; color?: string }[];
 }
 
 const MapView = ({
@@ -35,6 +36,7 @@ const MapView = ({
   onMapClick,
   showUserLocation = true,
   connectionLine = null,
+  connectionLines = [],
 }: MapViewProps) => {
   const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -241,6 +243,22 @@ const MapView = ({
             }}
           />
         )}
+        {connectionLines.map((line, i) => (
+          <Polyline
+            key={`cl-${i}`}
+            path={[line.from, line.to]}
+            options={{
+              strokeColor: line.color || '#3B82F6',
+              strokeWeight: 3,
+              strokeOpacity: 0.7,
+              icons: [{
+                icon: { path: 'M 0,-1 0,1', strokeOpacity: 1, scale: 3 },
+                offset: '0',
+                repeat: '15px',
+              }],
+            }}
+          />
+        ))}
       </GoogleMap>
 
       {showUserLocation && (
