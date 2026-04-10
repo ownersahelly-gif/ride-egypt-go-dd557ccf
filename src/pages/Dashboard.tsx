@@ -71,6 +71,7 @@ const Dashboard = () => {
   const [mapClickTarget, setMapClickTarget] = useState<'pickup' | 'dropoff'>('pickup');
   const [tripDirection, setTripDirection] = useState<'go' | 'return' | 'both'>('both');
   const [routeDirections, setRouteDirections] = useState<any>(null);
+  const [nearestRoutePoint, setNearestRoutePoint] = useState<{ lat: number; lng: number } | null>(null);
 
   // Saved locations & bundles
   const [savedLocations, setSavedLocations] = useState<any[]>([]);
