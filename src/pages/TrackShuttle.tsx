@@ -255,25 +255,42 @@ const TrackShuttle = () => {
       // Trip hasn't started — driver departs from route origin at scheduled time sharp
       // ETA = Google driving time from origin → (stops before you) → your pickup + 1 min per stop
       const routeOrigin = { lat: route.origin_lat, lng: route.origin_lng };
-      const waypoints = stopsBeforeMe.map(s => ({
-        location: new google.maps.LatLng(s.lat, s.lng),
-        stopover: true,
-      }));
-      ds.route({
-        origin: routeOrigin,
-        destination: myPickup,
-        waypoints,
-        optimizeWaypoints: false,
-        travelMode: google.maps.TravelMode.DRIVING,
-      }, (result, status) => {
-        if (status === 'OK' && result) {
-          let driveSeconds = 0;
-          result.routes[0]?.legs?.forEach(leg => { driveSeconds += leg.duration?.value ?? 0; });
-          // Add 1 min wait per intermediate stop
-          driveSeconds += stopsBeforeMe.length * 60;
-          setEtaMinutes(Math.ceil(driveSeconds / 60));
-        }
-      });
+
+      // If user pickup is at (or very near) the route origin and no stops before, ETA is 0
+      const distToOriginM = google.maps.geometry?.spherical
+        ? google.maps.geometry.spherical.computeDistanceBetween(
+            new google.maps.LatLng(myPickup.lat, myPickup.lng),
+            new google.maps.LatLng(routeOrigin.lat, routeOrigin.lng),
+          )
+        : Math.sqrt(
+            Math.pow((myPickup.lat - routeOrigin.lat) * 111320, 2) +
+            Math.pow((myPickup.lng - routeOrigin.lng) * 111320 * Math.cos(myPickup.lat * Math.PI / 180), 2),
+          );
+
+      if (stopsBeforeMe.length === 0 && distToOriginM < 300) {
+        // User is at origin — driver starts here, no travel needed
+        setEtaMinutes(0);
+      } else {
+        const waypoints = stopsBeforeMe.map(s => ({
+          location: new google.maps.LatLng(s.lat, s.lng),
+          stopover: true,
+        }));
+        ds.route({
+          origin: routeOrigin,
+          destination: myPickup,
+          waypoints,
+          optimizeWaypoints: false,
+          travelMode: google.maps.TravelMode.DRIVING,
+        }, (result, status) => {
+          if (status === 'OK' && result) {
+            let driveSeconds = 0;
+            result.routes[0]?.legs?.forEach(leg => { driveSeconds += leg.duration?.value ?? 0; });
+            // Add 1 min wait per intermediate stop
+            driveSeconds += stopsBeforeMe.length * 60;
+            setEtaMinutes(Math.ceil(driveSeconds / 60));
+          }
+        });
+      }
     }
   }, [shuttle?.current_lat, shuttle?.current_lng, booking, route, passengerStops]);
 
@@ -458,12 +475,16 @@ const TrackShuttle = () => {
                   <Navigation className="w-5 h-5 text-primary-foreground" />
                   <div>
                     <p className="text-primary-foreground font-bold text-lg leading-tight">
-                      {etaMinutes >= 60
-                        ? `${Math.floor(etaMinutes / 60)}${lang === 'ar' ? ' ساعة' : 'h'} ${etaMinutes % 60}${lang === 'ar' ? ' د' : 'm'}`
-                        : `${etaMinutes} ${lang === 'ar' ? 'دقيقة' : 'min'}`}
+                      {etaMinutes === 0
+                        ? (lang === 'ar' ? 'نقطة الانطلاق' : 'Starting point')
+                        : etaMinutes >= 60
+                          ? `${Math.floor(etaMinutes / 60)}${lang === 'ar' ? ' ساعة' : 'h'} ${etaMinutes % 60}${lang === 'ar' ? ' د' : 'm'}`
+                          : `${etaMinutes} ${lang === 'ar' ? 'دقيقة' : 'min'}`}
                     </p>
                     <p className="text-primary-foreground/80 text-xs">
-                      {lang === 'ar' ? 'الوقت المتوقع للوصول إليك' : 'Estimated arrival to you'}
+                      {etaMinutes === 0
+                        ? (lang === 'ar' ? 'السائق يبدأ من موقعك' : 'Driver starts at your location')
+                        : (lang === 'ar' ? 'الوقت المتوقع للوصول إليك' : 'Estimated arrival to you')}
                     </p>
                   </div>
                 </div>
