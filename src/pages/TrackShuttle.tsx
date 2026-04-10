@@ -395,12 +395,13 @@ const TrackShuttle = () => {
           <MapView
             className="h-full w-full"
             markers={markers}
-            origin={route ? { lat: route.origin_lat, lng: route.origin_lng } : undefined}
-            destination={route ? { lat: route.destination_lat, lng: route.destination_lng } : undefined}
-            showDirections={!!route}
+            origin={trackOrigin}
+            destination={trackDestination}
+            waypoints={trackWaypoints}
+            showDirections={!!trackOrigin && !!trackDestination}
             center={shuttle?.current_lat ? { lat: shuttle.current_lat, lng: shuttle.current_lng } : undefined}
             zoom={14}
-            showUserLocation
+            showUserLocation={false}
           />
         )}
 
