@@ -20,6 +20,7 @@ interface MapViewProps {
   className?: string;
   onMapClick?: (lat: number, lng: number) => void;
   showUserLocation?: boolean;
+  connectionLine?: { from: { lat: number; lng: number }; to: { lat: number; lng: number }; color?: string } | null;
 }
 
 const MapView = ({
@@ -33,6 +34,7 @@ const MapView = ({
   className = '',
   onMapClick,
   showUserLocation = true,
+  connectionLine = null,
 }: MapViewProps) => {
   const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
