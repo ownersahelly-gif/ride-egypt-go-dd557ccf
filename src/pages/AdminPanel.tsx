@@ -835,6 +835,62 @@ const AdminPanel = () => {
           </div>
         )}
 
+        {/* Carpool Verifications Tab */}
+        {tab === 'carpool' && (
+          <div className="space-y-6">
+            <h2 className="text-xl font-bold text-foreground">{lang === 'ar' ? 'طلبات التحقق - مشاركة الرحلات' : 'Carpool Verifications'}</h2>
+
+            {carpoolVerifications.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                {lang === 'ar' ? 'لا توجد طلبات تحقق' : 'No verification requests'}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {carpoolVerifications.map(v => (
+                  <div key={v.id} className="bg-card border border-border rounded-xl p-5">
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <p className="font-bold text-foreground">{carpoolProfiles[v.user_id]?.full_name || 'User'}</p>
+                        <p className="text-xs text-muted-foreground">{carpoolProfiles[v.user_id]?.phone || ''}</p>
+                      </div>
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                        v.status === 'approved' ? 'bg-green-100 text-green-700' :
+                        v.status === 'rejected' ? 'bg-destructive/10 text-destructive' :
+                        'bg-secondary/20 text-secondary'
+                      }`}>{v.status}</span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 mb-3 text-sm">
+                      <div><span className="text-muted-foreground">{lang === 'ar' ? 'اللوحة:' : 'Plate:'}</span> <span className="font-medium">{v.license_plate}</span></div>
+                      <div><span className="text-muted-foreground">{lang === 'ar' ? 'السيارة:' : 'Vehicle:'}</span> <span className="font-medium">{v.vehicle_model}</span></div>
+                    </div>
+
+                    {/* Document Links */}
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {v.id_front_url && <a href={v.id_front_url} target="_blank" rel="noopener noreferrer" className="text-xs bg-muted px-2 py-1 rounded hover:bg-muted-foreground/10">{lang === 'ar' ? 'بطاقة أمام' : 'ID Front'}</a>}
+                      {v.id_back_url && <a href={v.id_back_url} target="_blank" rel="noopener noreferrer" className="text-xs bg-muted px-2 py-1 rounded hover:bg-muted-foreground/10">{lang === 'ar' ? 'بطاقة خلف' : 'ID Back'}</a>}
+                      {v.driving_license_url && <a href={v.driving_license_url} target="_blank" rel="noopener noreferrer" className="text-xs bg-muted px-2 py-1 rounded hover:bg-muted-foreground/10">{lang === 'ar' ? 'رخصة قيادة' : 'Driving License'}</a>}
+                      {v.car_license_url && <a href={v.car_license_url} target="_blank" rel="noopener noreferrer" className="text-xs bg-muted px-2 py-1 rounded hover:bg-muted-foreground/10">{lang === 'ar' ? 'رخصة سيارة' : 'Car License'}</a>}
+                      {v.selfie_url && <a href={v.selfie_url} target="_blank" rel="noopener noreferrer" className="text-xs bg-muted px-2 py-1 rounded hover:bg-muted-foreground/10">{lang === 'ar' ? 'صورة شخصية' : 'Selfie'}</a>}
+                    </div>
+
+                    {v.status === 'pending' && (
+                      <div className="flex gap-2">
+                        <Button size="sm" className="flex-1" onClick={() => handleCarpoolVerification(v.id, 'approved')}>
+                          <CheckCircle2 className="w-4 h-4 me-1" />{lang === 'ar' ? 'موافقة' : 'Approve'}
+                        </Button>
+                        <Button size="sm" variant="outline" className="flex-1" onClick={() => handleCarpoolVerification(v.id, 'rejected')}>
+                          <XCircle className="w-4 h-4 me-1" />{lang === 'ar' ? 'رفض' : 'Reject'}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Settings Tab */}
         {tab === 'settings' && (
           <div className="space-y-6">
