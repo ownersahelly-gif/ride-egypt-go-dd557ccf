@@ -62,7 +62,7 @@ const DriverDashboard = () => {
   const [savingRouteRequest, setSavingRouteRequest] = useState(false);
   const [pickingLocation, setPickingLocation] = useState<'origin' | 'destination' | null>(null);
 
-  useDriverBookingNotifications(shuttle?.id || null);
+  const { newBookingsCount, acknowledge: ackBookings } = useDriverBookingNotifications(shuttle?.id || null);
 
   const dayNames = lang === 'ar'
     ? ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
