@@ -212,12 +212,12 @@ const DriverDashboard = () => {
     const { error } = await supabase.from('route_requests').insert({
       user_id: user.id,
       origin_name: routeRequestForm.origin_name,
-      origin_lat: 0,
-      origin_lng: 0,
+      origin_lat: routeRequestForm.origin_lat,
+      origin_lng: routeRequestForm.origin_lng,
       destination_name: routeRequestForm.destination_name,
-      destination_lat: 0,
-      destination_lng: 0,
-      preferred_time: routeRequestForm.preferred_time,
+      destination_lat: routeRequestForm.destination_lat,
+      destination_lng: routeRequestForm.destination_lng,
+      preferred_time: routeRequestForm.preferred_time_go,
       status: 'pending',
     });
     if (error) {
@@ -225,9 +225,19 @@ const DriverDashboard = () => {
     } else {
       toast({ title: lang === 'ar' ? 'تم إرسال طلبك!' : 'Route request submitted!', description: lang === 'ar' ? 'سيتم مراجعته وإضافته قريباً' : 'It will be reviewed and added soon' });
       setShowRouteRequest(false);
-      setRouteRequestForm({ origin_name: '', destination_name: '', preferred_time: '08:00' });
+      setRouteRequestForm({ origin_name: '', origin_lat: 0, origin_lng: 0, destination_name: '', destination_lat: 0, destination_lng: 0, preferred_time_go: '08:00', preferred_time_return: '17:00' });
+      setPickingLocation(null);
     }
     setSavingRouteRequest(false);
+  };
+
+  const handleMapClick = (lat: number, lng: number) => {
+    if (!pickingLocation) return;
+    if (pickingLocation === 'origin') {
+      setRouteRequestForm(p => ({ ...p, origin_lat: lat, origin_lng: lng, origin_name: p.origin_name || `${lat.toFixed(4)}, ${lng.toFixed(4)}` }));
+    } else {
+      setRouteRequestForm(p => ({ ...p, destination_lat: lat, destination_lng: lng, destination_name: p.destination_name || `${lat.toFixed(4)}, ${lng.toFixed(4)}` }));
+    }
   };
 
   const statusColors: Record<string, string> = {
