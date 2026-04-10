@@ -47,6 +47,7 @@ const DriverDashboard = () => {
     return_time: '17:00',
     is_recurring: true,
     min_passengers: 5,
+    trip_direction: 'both' as 'go' | 'return' | 'both',
   });
   const [savingSchedule, setSavingSchedule] = useState(false);
   const scheduleFormRef = useRef<HTMLDivElement>(null);
