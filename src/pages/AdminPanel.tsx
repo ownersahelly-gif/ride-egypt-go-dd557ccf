@@ -45,6 +45,7 @@ const AdminPanel = () => {
 
   // Route form
   const [showRouteForm, setShowRouteForm] = useState(false);
+  const [editingRouteId, setEditingRouteId] = useState<string | null>(null);
   const [routeForm, setRouteForm] = useState({
     name_en: '', name_ar: '', origin_name_en: '', origin_name_ar: '',
     destination_name_en: '', destination_name_ar: '', origin_lat: 30.0444,
@@ -115,17 +116,38 @@ const AdminPanel = () => {
   };
 
   const createRoute = async () => {
-    const { error } = await supabase.from('routes').insert({
+    const routeData = {
       ...routeForm,
       description_en: `${routeForm.origin_name_en} to ${routeForm.destination_name_en}`,
       description_ar: `${routeForm.origin_name_ar} إلى ${routeForm.destination_name_ar}`,
       status: 'active',
-    });
-    if (error) { toast.error(error.message); return; }
-    toast.success('Route created!');
+    };
+    if (editingRouteId) {
+      const { error } = await supabase.from('routes').update(routeData).eq('id', editingRouteId);
+      if (error) { toast.error(error.message); return; }
+      toast.success(lang === 'ar' ? 'تم تحديث المسار' : 'Route updated!');
+    } else {
+      const { error } = await supabase.from('routes').insert(routeData);
+      if (error) { toast.error(error.message); return; }
+      toast.success('Route created!');
+    }
     setShowRouteForm(false);
+    setEditingRouteId(null);
     setRouteForm({ name_en: '', name_ar: '', origin_name_en: '', origin_name_ar: '', destination_name_en: '', destination_name_ar: '', origin_lat: 30.0444, origin_lng: 31.2357, destination_lat: 30.0131, destination_lng: 31.2089, price: 25, estimated_duration_minutes: 30 });
     fetchAllData();
+  };
+
+  const startEditRoute = (route: any) => {
+    setRouteForm({
+      name_en: route.name_en, name_ar: route.name_ar,
+      origin_name_en: route.origin_name_en, origin_name_ar: route.origin_name_ar,
+      destination_name_en: route.destination_name_en, destination_name_ar: route.destination_name_ar,
+      origin_lat: route.origin_lat, origin_lng: route.origin_lng,
+      destination_lat: route.destination_lat, destination_lng: route.destination_lng,
+      price: route.price, estimated_duration_minutes: route.estimated_duration_minutes,
+    });
+    setEditingRouteId(route.id);
+    setShowRouteForm(true);
   };
 
   const toggleRouteStatus = async (id: string, current: string) => {
@@ -416,14 +438,14 @@ const AdminPanel = () => {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold text-foreground">{lang === 'ar' ? 'إدارة المسارات' : 'Route Management'}</h2>
-              <Button onClick={() => setShowRouteForm(!showRouteForm)}>
+              <Button onClick={() => { setEditingRouteId(null); setRouteForm({ name_en: '', name_ar: '', origin_name_en: '', origin_name_ar: '', destination_name_en: '', destination_name_ar: '', origin_lat: 30.0444, origin_lng: 31.2357, destination_lat: 30.0131, destination_lng: 31.2089, price: 25, estimated_duration_minutes: 30 }); setShowRouteForm(!showRouteForm); }}>
                 <Plus className="w-4 h-4 me-1" />{lang === 'ar' ? 'مسار جديد' : 'New Route'}
               </Button>
             </div>
 
             {showRouteForm && (
               <div className="bg-card border border-border rounded-xl p-6 space-y-4">
-                <h3 className="font-semibold text-foreground">{lang === 'ar' ? 'إنشاء مسار' : 'Create Route'}</h3>
+                <h3 className="font-semibold text-foreground">{editingRouteId ? (lang === 'ar' ? 'تعديل المسار' : 'Edit Route') : (lang === 'ar' ? 'إنشاء مسار' : 'Create Route')}</h3>
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Name (EN)</Label>
@@ -490,9 +512,9 @@ const AdminPanel = () => {
                 </div>
                 <div className="flex gap-2">
                   <Button onClick={createRoute} disabled={!routeForm.name_en || !routeForm.name_ar}>
-                    <CheckCircle2 className="w-4 h-4 me-1" />{lang === 'ar' ? 'إنشاء' : 'Create'}
+                    <CheckCircle2 className="w-4 h-4 me-1" />{editingRouteId ? (lang === 'ar' ? 'تحديث' : 'Update') : (lang === 'ar' ? 'إنشاء' : 'Create')}
                   </Button>
-                  <Button variant="outline" onClick={() => setShowRouteForm(false)}>
+                  <Button variant="outline" onClick={() => { setShowRouteForm(false); setEditingRouteId(null); }}>
                     {lang === 'ar' ? 'إلغاء' : 'Cancel'}
                   </Button>
                 </div>
@@ -517,6 +539,9 @@ const AdminPanel = () => {
                   <span><Clock className="w-3 h-3 inline me-1" />{route.estimated_duration_minutes} min</span>
                 </div>
                 <div className="flex gap-2">
+                  <Button size="sm" variant="outline" onClick={() => startEditRoute(route)}>
+                    <Edit className="w-3.5 h-3.5 me-1" />{lang === 'ar' ? 'تعديل' : 'Edit'}
+                  </Button>
                   <Button size="sm" variant="outline" onClick={() => toggleRouteStatus(route.id, route.status)}>
                     {route.status === 'active' ? (lang === 'ar' ? 'تعطيل' : 'Deactivate') : (lang === 'ar' ? 'تفعيل' : 'Activate')}
                   </Button>

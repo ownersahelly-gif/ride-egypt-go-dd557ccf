@@ -70,6 +70,16 @@ const calcDeviation = (
   return Promise.all([directReq(), detourReq()]).then(([direct, detour]) => (detour - direct) / 60);
 };
 
+/** Haversine distance in km */
+const haversineDistanceKm = (a: { lat: number; lng: number }, b: { lat: number; lng: number }) => {
+  const toRad = (d: number) => d * Math.PI / 180;
+  const R = 6371;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const x = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+};
+
 type PointSelection = { lat: number; lng: number; name: string } | null;
 
 const BookRide = () => {
@@ -285,6 +295,30 @@ const BookRide = () => {
   const isPickupValid = pickupMode === 'start' ? true : (!!customPickup && pickupResult?.ok === true);
   const isDropoffValid = dropoffMode === 'end' ? true : (!!customDropoff && dropoffResult?.ok === true);
 
+  // Distance-based pricing: price proportional to km traveled
+  const calcDynamicPrice = useCallback(() => {
+    if (!selectedRide?.routes) return selectedRide?.routes?.price || 0;
+    const route = selectedRide.routes;
+    const fullRouteKm = haversineDistanceKm(
+      { lat: route.origin_lat, lng: route.origin_lng },
+      { lat: route.destination_lat, lng: route.destination_lng }
+    );
+    if (fullRouteKm < 0.1) return route.price;
+
+    const pLat = pickupMode === 'start' ? route.origin_lat : (customPickup?.lat ?? route.origin_lat);
+    const pLng = pickupMode === 'start' ? route.origin_lng : (customPickup?.lng ?? route.origin_lng);
+    const dLat = dropoffMode === 'end' ? route.destination_lat : (customDropoff?.lat ?? route.destination_lat);
+    const dLng = dropoffMode === 'end' ? route.destination_lng : (customDropoff?.lng ?? route.destination_lng);
+
+    const passengerKm = haversineDistanceKm({ lat: pLat, lng: pLng }, { lat: dLat, lng: dLng });
+    const ratio = Math.min(1, passengerKm / fullRouteKm);
+    // Minimum 30% of full price
+    const adjustedRatio = Math.max(0.3, ratio);
+    return Math.round(route.price * adjustedRatio);
+  }, [selectedRide, pickupMode, dropoffMode, customPickup, customDropoff]);
+
+  const dynamicPrice = calcDynamicPrice();
+
   // InstaPay payment proof
   const [paymentProof, setPaymentProof] = useState<File | null>(null);
   const [paymentPreview, setPaymentPreview] = useState<string | null>(null);
@@ -372,7 +406,7 @@ const BookRide = () => {
         ? (lang === 'ar' ? selectedRide.routes.destination_name_ar : selectedRide.routes.destination_name_en)
         : customDropoff?.name;
 
-      const basePrice = selectedRide.routes?.price || 0;
+      const basePrice = dynamicPrice;
       const totalPrice = usingBundle ? 0 : (tripDirection === 'both' ? basePrice * 2 : basePrice);
 
       const bookingData: any = {
@@ -875,7 +909,7 @@ const BookRide = () => {
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div className="bg-surface rounded-xl p-3 text-center">
-                  <p className="text-xl font-bold text-primary">{selectedRide.routes?.price} EGP</p>
+                  <p className="text-xl font-bold text-primary">{dynamicPrice} EGP</p>
                   <p className="text-xs text-muted-foreground">{lang === 'ar' ? 'للراكب' : 'per person'}</p>
                 </div>
                 <div className="bg-surface rounded-xl p-3 text-center">
@@ -967,7 +1001,7 @@ const BookRide = () => {
                   { value: 'return' as const, labelAr: 'عودة فقط', labelEn: 'Return Only', priceMultiplier: 1 },
                   { value: 'both' as const, labelAr: 'ذهاب وعودة', labelEn: 'Round Trip', priceMultiplier: 2 },
                 ]).map(opt => {
-                  const basePrice = selectedRide.routes?.price || 0;
+                  const basePrice = dynamicPrice;
                   return (
                     <button key={opt.value} onClick={() => setTripDirection(opt.value)}
                       className={`px-2 py-3 rounded-xl text-center border-2 transition-colors ${
@@ -1093,7 +1127,7 @@ const BookRide = () => {
                 </h3>
                 <div className="bg-surface rounded-xl p-4 text-sm text-muted-foreground space-y-2">
                   <p>{lang === 'ar' ? 'حوّل المبلغ عبر InstaPay ثم ارفع لقطة شاشة للتحويل:' : 'Transfer the amount via InstaPay then upload a screenshot:'}</p>
-                  <p className="font-bold text-foreground text-lg">{tripDirection === 'both' ? (selectedRide.routes?.price || 0) * 2 : selectedRide.routes?.price} EGP</p>
+                  <p className="font-bold text-foreground text-lg">{tripDirection === 'both' ? dynamicPrice * 2 : dynamicPrice} EGP</p>
                   {tripDirection === 'both' && <p className="text-xs text-muted-foreground">{lang === 'ar' ? '(ذهاب + عودة)' : '(Going + Return)'}</p>}
                   {instapayPhone && (
                     <div className="flex items-center gap-2 bg-card border border-border rounded-lg p-3 mt-2">
@@ -1146,15 +1180,15 @@ const BookRide = () => {
                 </span>
                 {useBundle ? (
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground line-through">{tripDirection === 'both' ? (selectedRide.routes?.price || 0) * 2 : selectedRide.routes?.price} EGP</span>
+                    <span className="text-sm text-muted-foreground line-through">{tripDirection === 'both' ? dynamicPrice * 2 : dynamicPrice} EGP</span>
                     <span className="text-lg font-bold text-secondary">{lang === 'ar' ? 'من الباقة' : 'Bundle'}</span>
                   </div>
                 ) : (
-                  <span className="text-lg font-bold text-primary">{tripDirection === 'both' ? (selectedRide.routes?.price || 0) * 2 : selectedRide.routes?.price} EGP</span>
+                  <span className="text-lg font-bold text-primary">{tripDirection === 'both' ? dynamicPrice * 2 : dynamicPrice} EGP</span>
                 )}
               </div>
               {tripDirection === 'both' && !useBundle && (
-                <p className="text-[10px] text-muted-foreground mb-2">{lang === 'ar' ? `${selectedRide.routes?.price} × 2 رحلة` : `${selectedRide.routes?.price} × 2 trips`}</p>
+                <p className="text-[10px] text-muted-foreground mb-2">{lang === 'ar' ? `${dynamicPrice} × 2 رحلة` : `${dynamicPrice} × 2 trips`}</p>
               )}
 
               {!isRideFull ? (

@@ -60,6 +60,8 @@ const ActiveRide = () => {
   const [currentStopIndex, setCurrentStopIndex] = useState(0);
   const [driverLocation, setDriverLocation] = useState<{ lat: number; lng: number } | null>(null);
   const reachedStopsRef = useRef<Set<number>>(new Set());
+  const [arrivedAt, setArrivedAt] = useState<number | null>(null); // timestamp when driver arrived at current pickup
+  const [waitSeconds, setWaitSeconds] = useState(0);
 
   const fetchData = useCallback(async () => {
     if (!user) return;
@@ -217,7 +219,7 @@ const ActiveRide = () => {
     return () => navigator.geolocation.clearWatch(watchId);
   }, [shuttle?.id]);
 
-  // Auto-advance when driver reaches current stop
+  // Auto-advance when driver reaches current stop & start wait timer for pickups
   useEffect(() => {
     if (!driverLocation || orderedStops.length === 0) return;
     if (currentStopIndex >= orderedStops.length) return;
@@ -227,6 +229,11 @@ const ActiveRide = () => {
 
     if (dist <= REACH_THRESHOLD_M && !reachedStopsRef.current.has(currentStopIndex)) {
       reachedStopsRef.current.add(currentStopIndex);
+      // Start wait timer for pickups
+      if (currentStop.type === 'pickup') {
+        setArrivedAt(Date.now());
+        setWaitSeconds(0);
+      }
       toast({
         title: currentStop.type === 'pickup'
           ? (lang === 'ar' ? `📍 وصلت لنقطة صعود ${currentStop.name}` : `📍 Reached ${currentStop.name}'s pickup`)
@@ -234,6 +241,21 @@ const ActiveRide = () => {
       });
     }
   }, [driverLocation, orderedStops, currentStopIndex, lang, toast]);
+
+  // Reset arrivedAt when stop changes
+  useEffect(() => {
+    setArrivedAt(null);
+    setWaitSeconds(0);
+  }, [currentStopIndex]);
+
+  // Tick the wait timer every second
+  useEffect(() => {
+    if (arrivedAt === null) return;
+    const interval = setInterval(() => {
+      setWaitSeconds(Math.floor((Date.now() - arrivedAt) / 1000));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [arrivedAt]);
 
   const advanceToNextStop = () => {
     if (currentStopIndex < orderedStops.length - 1) {
@@ -491,9 +513,21 @@ const ActiveRide = () => {
                   <Button variant="outline" onClick={() => setChatBookingId(currentStop.bookingId)}>
                     <MessageCircle className="w-4 h-4" />
                   </Button>
-                  <Button variant="outline" onClick={advanceToNextStop} title={lang === 'ar' ? 'تخطي' : 'Skip'}>
-                    <SkipForward className="w-4 h-4" />
-                  </Button>
+                  {waitSeconds >= 60 ? (
+                    <Button variant="destructive" onClick={advanceToNextStop} title={lang === 'ar' ? 'تخطي - انتظرت دقيقة' : 'Skip - waited 1 min'}>
+                      <SkipForward className="w-4 h-4 me-1" />
+                      {lang === 'ar' ? 'تخطي' : 'Skip'}
+                    </Button>
+                  ) : arrivedAt ? (
+                    <Button variant="outline" disabled title={lang === 'ar' ? `انتظر ${60 - waitSeconds} ثانية` : `Wait ${60 - waitSeconds}s`}>
+                      <Clock className="w-4 h-4 me-1" />
+                      {60 - waitSeconds}s
+                    </Button>
+                  ) : (
+                    <Button variant="outline" onClick={advanceToNextStop} title={lang === 'ar' ? 'تخطي' : 'Skip'}>
+                      <SkipForward className="w-4 h-4" />
+                    </Button>
+                  )}
                 </div>
               )
             ) : (
