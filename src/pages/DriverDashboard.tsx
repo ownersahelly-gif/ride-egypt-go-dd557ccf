@@ -276,10 +276,10 @@ const DriverDashboard = () => {
     const { error } = await supabase.from('driver_schedules').delete().eq('id', id);
     if (error) { toast({ title: t('auth.error'), description: error.message, variant: 'destructive' }); return; }
 
-    // Cancel all future ride instances for this schedule's route/shuttle
+    // Cancel all future ride instances and bookings for this shuttle
     if (shuttle && schedule) {
       const todayStr = new Date().toISOString().split('T')[0];
-      // Get future ride instances for this shuttle+route
+      // Cancel future ride instances for this shuttle+route
       const { data: futureRides } = await supabase
         .from('ride_instances')
         .select('id')
@@ -289,19 +289,20 @@ const DriverDashboard = () => {
         .in('status', ['scheduled']);
 
       if (futureRides && futureRides.length > 0) {
-        const rideIds = futureRides.map(r => r.id);
-        // Cancel ride instances
-        await supabase.from('ride_instances').update({ status: 'cancelled' }).in('id', rideIds);
-
-        // Cancel all bookings on those rides and notify users (realtime will trigger notifications)
-        await supabase
-          .from('bookings')
-          .update({ status: 'cancelled' })
-          .eq('shuttle_id', shuttle.id)
-          .eq('route_id', schedule.route_id)
-          .gte('scheduled_date', todayStr)
-          .in('status', ['pending', 'confirmed']);
+        await supabase.from('ride_instances').update({ status: 'cancelled' }).in('id', futureRides.map(r => r.id));
       }
+
+      // Cancel all bookings on this shuttle (matching route or null route) — triggers realtime notifications
+      let bookingQuery = supabase
+        .from('bookings')
+        .update({ status: 'cancelled' })
+        .eq('shuttle_id', shuttle.id)
+        .gte('scheduled_date', todayStr)
+        .in('status', ['pending', 'confirmed']);
+
+      // Match bookings with this route_id OR with null route_id (legacy bookings)
+      bookingQuery = bookingQuery.or(`route_id.eq.${schedule.route_id},route_id.is.null`);
+      await bookingQuery;
     }
 
     setDriverSchedules(prev => prev.filter(s => s.id !== id));
