@@ -606,8 +606,8 @@ const DriverDashboard = () => {
                         // Get passenger count for THIS specific slot
                         const slotBookings = bookings.filter(b => {
                           if (b.route_id !== slot.routeId || b.status === 'cancelled') return false;
-                          const bDow = new Date(b.scheduled_date).getDay();
-                          if (bDow !== slot.day) return false;
+                          // Match by date string for accuracy (avoids timezone day-of-week issues)
+                          if (b.scheduled_date !== slot.dateStr) return false;
                           // Match direction — schedule uses 'go'/'back', bookings use 'go'/'return'/'both'
                           if (slot.direction === 'go') return b.trip_direction === 'go' || b.trip_direction === 'both';
                           return b.trip_direction === 'return' || b.trip_direction === 'back' || b.trip_direction === 'both';
