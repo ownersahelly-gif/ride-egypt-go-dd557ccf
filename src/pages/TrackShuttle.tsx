@@ -130,7 +130,7 @@ const TrackShuttle = () => {
       if (bookingData.shuttle_id && bookingData.scheduled_date) {
         const { data: allBookings } = await supabase
           .from('bookings')
-          .select('*, profiles!bookings_user_id_fkey(full_name)')
+          .select('*')
           .eq('shuttle_id', bookingData.shuttle_id)
           .eq('scheduled_date', bookingData.scheduled_date)
           .eq('scheduled_time', bookingData.scheduled_time)
@@ -172,7 +172,7 @@ const TrackShuttle = () => {
       const isMe = b.user_id === user.id;
       const name = isMe
         ? (lang === 'ar' ? 'أنت' : 'You')
-        : (b.profiles?.full_name || (lang === 'ar' ? 'راكب' : 'Passenger'));
+        : (lang === 'ar' ? 'راكب' : 'Passenger');
 
       stops.push({
         userId: b.user_id,
