@@ -262,11 +262,17 @@ const Dashboard = () => {
     let minDist = Infinity;
     if (routeDirections) {
       const path = routeDirections.routes?.[0]?.overview_path;
-      if (path && path.length > 0) {
-        for (const p of path) {
-          const d = haversineDistanceKm(point, { lat: p.lat(), lng: p.lng() });
-          if (d < minDist) { minDist = d; nearest = { lat: p.lat(), lng: p.lng() }; }
+      if (path && path.length > 1) {
+        // Check every segment, not just vertices
+        for (let i = 0; i < path.length - 1; i++) {
+          const a = { lat: path[i].lat(), lng: path[i].lng() };
+          const b = { lat: path[i + 1].lat(), lng: path[i + 1].lng() };
+          const projected = closestPointOnSegment(point, a, b);
+          const d = haversineDistanceKm(point, projected);
+          if (d < minDist) { minDist = d; nearest = projected; }
         }
+      } else if (path && path.length === 1) {
+        nearest = { lat: path[0].lat(), lng: path[0].lng() };
       }
     }
     if (!nearest && selectedRide?.routes) {
