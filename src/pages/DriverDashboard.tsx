@@ -29,6 +29,10 @@ const DriverDashboard = () => {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [expandedTrips, setExpandedTrips] = useState<Set<string>>(new Set());
+  const [passengerProfiles, setPassengerProfiles] = useState<Record<string, any>>({});
+  const [chatBookingId, setChatBookingId] = useState<string | null>(null);
+  const [chatPassengerName, setChatPassengerName] = useState<string>('');
 
   // Schedule states
   const [allRoutes, setAllRoutes] = useState<any[]>([]);
