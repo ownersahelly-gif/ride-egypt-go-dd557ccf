@@ -657,6 +657,15 @@ const Dashboard = () => {
           zoom={12}
           showUserLocation
           onMapClick={step === 'details' && isNearbyMode ? handleMapClick : undefined}
+          connectionLine={
+            nearestRoutePoint && (customPickup || customDropoff)
+              ? {
+                  from: (customPickup && pickupMode === 'nearby' ? customPickup : customDropoff) || { lat: 0, lng: 0 },
+                  to: nearestRoutePoint,
+                  color: (pickupResult?.ok === false || dropoffResult?.ok === false) ? '#EF4444' : '#22C55E',
+                }
+              : null
+          }
         />
         {/* Tap-on-map hint when nearby mode is active */}
         {step === 'details' && isNearbyMode && (
