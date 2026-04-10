@@ -767,7 +767,7 @@ const DriverDashboard = () => {
                     // Build map markers from optimized order
                     const mapMarkers = isExpanded ? [
                       { lat: routeOrigin.lat, lng: routeOrigin.lng, label: lang === 'ar' ? 'أ' : 'A', color: 'green' as const },
-                      ...optimizedWaypoints.map((wp, i) => ({
+                      ...optimizedWaypoints.filter(wp => wp?.coords).map((wp, i) => ({
                         lat: wp.coords.lat,
                         lng: wp.coords.lng,
                         label: `${i + 1}`,
