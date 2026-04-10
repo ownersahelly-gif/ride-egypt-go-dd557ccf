@@ -109,7 +109,7 @@ const DriverDashboard = () => {
         setBookings(allBookings);
         const { data: schedulesData } = await supabase
           .from('driver_schedules')
-          .select('*, routes(name_en, name_ar, price, origin_name_en, origin_name_ar, destination_name_en, destination_name_ar, estimated_duration_minutes)')
+          .select('*, routes(name_en, name_ar, price, origin_name_en, origin_name_ar, destination_name_en, destination_name_ar, estimated_duration_minutes, origin_lat, origin_lng, destination_lat, destination_lng)')
           .eq('driver_id', user.id).order('day_of_week');
         setDriverSchedules(schedulesData || []);
         if (allBookings.length > 0) {
@@ -197,7 +197,7 @@ const DriverDashboard = () => {
     else {
       toast({ title: lang === 'ar' ? 'تم حفظ الجدول!' : 'Schedule saved!' });
       await generateRideInstances(departureEntries);
-      const { data } = await supabase.from('driver_schedules').select('*, routes(name_en, name_ar, price, origin_name_en, origin_name_ar, destination_name_en, destination_name_ar, estimated_duration_minutes)').eq('driver_id', user.id).order('day_of_week');
+      const { data } = await supabase.from('driver_schedules').select('*, routes(name_en, name_ar, price, origin_name_en, origin_name_ar, destination_name_en, destination_name_ar, estimated_duration_minutes, origin_lat, origin_lng, destination_lat, destination_lng)').eq('driver_id', user.id).order('day_of_week');
       setDriverSchedules(data || []);
       setShowScheduleForm(false);
       setSelectedRouteForSchedule(null);
