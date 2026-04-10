@@ -468,6 +468,20 @@ const DriverDashboard = () => {
                               <p className="text-xs text-muted-foreground">{routeInfo?.price} EGP/{lang === 'ar' ? 'مقعد' : 'seat'}</p>
                             </div>
                           </div>
+                          {routeInfo?.origin_lat && routeInfo?.destination_lat && (
+                            <MapView
+                              className="h-[180px] mb-3"
+                              markers={[
+                                { lat: routeInfo.origin_lat, lng: routeInfo.origin_lng, label: 'A', color: 'green' },
+                                { lat: routeInfo.destination_lat, lng: routeInfo.destination_lng, label: 'B', color: 'red' },
+                              ]}
+                              origin={{ lat: routeInfo.origin_lat, lng: routeInfo.origin_lng }}
+                              destination={{ lat: routeInfo.destination_lat, lng: routeInfo.destination_lng }}
+                              showDirections
+                              showUserLocation={false}
+                              zoom={10}
+                            />
+                          )}
                           <div className="space-y-1.5">
                             {(schedules as any[]).sort((a: any, b: any) => a.day_of_week - b.day_of_week).map((s: any) => (
                               <div key={s.id} className="flex items-center justify-between bg-surface rounded-lg px-3 py-2">
@@ -581,6 +595,20 @@ const DriverDashboard = () => {
                             <p className="text-[10px] text-muted-foreground">{r.estimated_duration_minutes} {lang === 'ar' ? 'د' : 'min'}</p>
                           </div>
                         </div>
+                        {r.origin_lat && r.destination_lat && (
+                          <MapView
+                            className="h-[150px] mb-2"
+                            markers={[
+                              { lat: r.origin_lat, lng: r.origin_lng, label: 'A', color: 'green' },
+                              { lat: r.destination_lat, lng: r.destination_lng, label: 'B', color: 'red' },
+                            ]}
+                            origin={{ lat: r.origin_lat, lng: r.origin_lng }}
+                            destination={{ lat: r.destination_lat, lng: r.destination_lng }}
+                            showDirections
+                            showUserLocation={false}
+                            zoom={10}
+                          />
+                        )}
                         <div className="flex items-center justify-between">
                           <p className="text-xs text-green-600">
                             <TrendingUp className="w-3 h-3 inline me-1" />
