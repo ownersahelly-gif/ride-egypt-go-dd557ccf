@@ -272,9 +272,40 @@ const DriverDashboard = () => {
   };
 
   const deleteSchedule = async (id: string) => {
+    const schedule = driverSchedules.find(s => s.id === id);
     const { error } = await supabase.from('driver_schedules').delete().eq('id', id);
-    if (error) toast({ title: t('auth.error'), description: error.message, variant: 'destructive' });
-    else { setDriverSchedules(prev => prev.filter(s => s.id !== id)); toast({ title: lang === 'ar' ? 'تم حذف الجدول' : 'Schedule removed' }); }
+    if (error) { toast({ title: t('auth.error'), description: error.message, variant: 'destructive' }); return; }
+
+    // Cancel all future ride instances for this schedule's route/shuttle
+    if (shuttle && schedule) {
+      const todayStr = new Date().toISOString().split('T')[0];
+      // Get future ride instances for this shuttle+route
+      const { data: futureRides } = await supabase
+        .from('ride_instances')
+        .select('id')
+        .eq('shuttle_id', shuttle.id)
+        .eq('route_id', schedule.route_id)
+        .gte('ride_date', todayStr)
+        .in('status', ['scheduled']);
+
+      if (futureRides && futureRides.length > 0) {
+        const rideIds = futureRides.map(r => r.id);
+        // Cancel ride instances
+        await supabase.from('ride_instances').update({ status: 'cancelled' }).in('id', rideIds);
+
+        // Cancel all bookings on those rides and notify users (realtime will trigger notifications)
+        await supabase
+          .from('bookings')
+          .update({ status: 'cancelled' })
+          .eq('shuttle_id', shuttle.id)
+          .eq('route_id', schedule.route_id)
+          .gte('scheduled_date', todayStr)
+          .in('status', ['pending', 'confirmed']);
+      }
+    }
+
+    setDriverSchedules(prev => prev.filter(s => s.id !== id));
+    toast({ title: lang === 'ar' ? 'تم حذف الجدول وإلغاء الرحلات' : 'Schedule removed & rides cancelled' });
   };
 
   const submitRouteRequest = async () => {
