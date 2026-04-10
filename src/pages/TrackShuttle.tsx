@@ -8,7 +8,7 @@ import MapView from '@/components/MapView';
 import {
   ChevronLeft, ChevronRight, MapPin, Clock, Car, RefreshCw,
   Radio, Users, Navigation, Phone, MessageCircle, Key, ArrowRight,
-  Shield, Share2, ExternalLink, Star
+  Shield, Share2, ExternalLink, Star, CheckCircle2
 } from 'lucide-react';
 import RideChat from '@/components/RideChat';
 import { useToast } from '@/hooks/use-toast';
