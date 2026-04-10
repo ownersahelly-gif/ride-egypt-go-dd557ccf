@@ -151,6 +151,11 @@ const ActiveRide = () => {
       const pickupLng = b.custom_pickup_lng ?? route.origin_lng;
       const isCustomPickup = !!(b.custom_pickup_lat && b.custom_pickup_lng);
 
+      const dropoffLat = b.custom_dropoff_lat ?? route.destination_lat;
+      const dropoffLng = b.custom_dropoff_lng ?? route.destination_lng;
+      const isCustomDropoff = !!(b.custom_dropoff_lat && b.custom_dropoff_lng);
+
+      // Always add pickup (for confirmed passengers)
       if (b.status === 'confirmed') {
         stops.push({
           bookingId: b.id,
@@ -169,11 +174,8 @@ const ActiveRide = () => {
         });
       }
 
-      if (b.status === 'boarded') {
-        const dropoffLat = b.custom_dropoff_lat ?? route.destination_lat;
-        const dropoffLng = b.custom_dropoff_lng ?? route.destination_lng;
-        const isCustomDropoff = !!(b.custom_dropoff_lat && b.custom_dropoff_lng);
-
+      // Always add dropoff (for both confirmed and boarded — so driver sees full route)
+      if (b.status === 'confirmed' || b.status === 'boarded') {
         stops.push({
           bookingId: b.id,
           userId: b.user_id,
