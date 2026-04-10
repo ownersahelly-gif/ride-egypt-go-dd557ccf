@@ -30,6 +30,20 @@ const haversineDistanceKm = (a: { lat: number; lng: number }, b: { lat: number; 
   return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
 };
 
+/** Project point onto the closest position on line segment A→B (in lat/lng space) */
+const closestPointOnSegment = (
+  p: { lat: number; lng: number },
+  a: { lat: number; lng: number },
+  b: { lat: number; lng: number },
+): { lat: number; lng: number } => {
+  const dx = b.lng - a.lng;
+  const dy = b.lat - a.lat;
+  if (dx === 0 && dy === 0) return a; // segment is a point
+  let t = ((p.lng - a.lng) * dx + (p.lat - a.lat) * dy) / (dx * dx + dy * dy);
+  t = Math.max(0, Math.min(1, t));
+  return { lat: a.lat + t * dy, lng: a.lng + t * dx };
+};
+
 
 type PointSelection = { lat: number; lng: number; name: string } | null;
 
@@ -248,11 +262,17 @@ const Dashboard = () => {
     let minDist = Infinity;
     if (routeDirections) {
       const path = routeDirections.routes?.[0]?.overview_path;
-      if (path && path.length > 0) {
-        for (const p of path) {
-          const d = haversineDistanceKm(point, { lat: p.lat(), lng: p.lng() });
-          if (d < minDist) { minDist = d; nearest = { lat: p.lat(), lng: p.lng() }; }
+      if (path && path.length > 1) {
+        // Check every segment, not just vertices
+        for (let i = 0; i < path.length - 1; i++) {
+          const a = { lat: path[i].lat(), lng: path[i].lng() };
+          const b = { lat: path[i + 1].lat(), lng: path[i + 1].lng() };
+          const projected = closestPointOnSegment(point, a, b);
+          const d = haversineDistanceKm(point, projected);
+          if (d < minDist) { minDist = d; nearest = projected; }
         }
+      } else if (path && path.length === 1) {
+        nearest = { lat: path[0].lat(), lng: path[0].lng() };
       }
     }
     if (!nearest && selectedRide?.routes) {
