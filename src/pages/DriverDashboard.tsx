@@ -524,11 +524,12 @@ const DriverDashboard = () => {
                         return (
                           <div key={key} className={`bg-card border rounded-2xl overflow-hidden transition-all ${
                             slot.direction === 'go' ? 'border-green-200' : 'border-blue-200'
-                          }`}>
-                            <button
-                              onClick={() => setExpandedUpcoming(isExpanded ? null : key)}
-                              className="w-full p-4 text-start hover:bg-muted/30 transition-colors"
-                            >
+                          } ${slot.isPast ? 'opacity-50' : ''}`}>
+                            <div className="flex items-stretch">
+                              <button
+                                onClick={() => setExpandedUpcoming(isExpanded ? null : key)}
+                                className="flex-1 p-4 text-start hover:bg-muted/30 transition-colors"
+                              >
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold ${
