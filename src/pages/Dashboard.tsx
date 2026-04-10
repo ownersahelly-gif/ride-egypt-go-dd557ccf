@@ -760,16 +760,17 @@ const Dashboard = () => {
                         </span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
                       <MapPin className="w-3 h-3 text-green-500 shrink-0" />
-                      <span className="truncate">
+                      <span className="flex-1 break-words">
                         {ride.direction === 'return'
                           ? (lang === 'ar' ? ride.routes?.destination_name_ar : ride.routes?.destination_name_en)
                           : (lang === 'ar' ? ride.routes?.origin_name_ar : ride.routes?.origin_name_en)}
                       </span>
-                      <ArrowRight className={`w-3 h-3 shrink-0 ${lang === 'ar' ? 'rotate-180' : ''}`} />
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
                       <MapPin className="w-3 h-3 text-destructive shrink-0" />
-                      <span className="truncate">
+                      <span className="flex-1 break-words">
                         {ride.direction === 'return'
                           ? (lang === 'ar' ? ride.routes?.origin_name_ar : ride.routes?.origin_name_en)
                           : (lang === 'ar' ? ride.routes?.destination_name_ar : ride.routes?.destination_name_en)}
