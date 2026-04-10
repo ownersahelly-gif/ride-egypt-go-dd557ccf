@@ -219,7 +219,7 @@ const ActiveRide = () => {
     return () => navigator.geolocation.clearWatch(watchId);
   }, [shuttle?.id]);
 
-  // Auto-advance when driver reaches current stop
+  // Auto-advance when driver reaches current stop & start wait timer for pickups
   useEffect(() => {
     if (!driverLocation || orderedStops.length === 0) return;
     if (currentStopIndex >= orderedStops.length) return;
@@ -229,6 +229,11 @@ const ActiveRide = () => {
 
     if (dist <= REACH_THRESHOLD_M && !reachedStopsRef.current.has(currentStopIndex)) {
       reachedStopsRef.current.add(currentStopIndex);
+      // Start wait timer for pickups
+      if (currentStop.type === 'pickup') {
+        setArrivedAt(Date.now());
+        setWaitSeconds(0);
+      }
       toast({
         title: currentStop.type === 'pickup'
           ? (lang === 'ar' ? `📍 وصلت لنقطة صعود ${currentStop.name}` : `📍 Reached ${currentStop.name}'s pickup`)
@@ -236,6 +241,21 @@ const ActiveRide = () => {
       });
     }
   }, [driverLocation, orderedStops, currentStopIndex, lang, toast]);
+
+  // Reset arrivedAt when stop changes
+  useEffect(() => {
+    setArrivedAt(null);
+    setWaitSeconds(0);
+  }, [currentStopIndex]);
+
+  // Tick the wait timer every second
+  useEffect(() => {
+    if (arrivedAt === null) return;
+    const interval = setInterval(() => {
+      setWaitSeconds(Math.floor((Date.now() - arrivedAt) / 1000));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [arrivedAt]);
 
   const advanceToNextStop = () => {
     if (currentStopIndex < orderedStops.length - 1) {
