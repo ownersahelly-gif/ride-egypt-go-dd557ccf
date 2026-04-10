@@ -98,6 +98,9 @@ const BookRide = () => {
   // Which one is being set via map click
   const [mapClickTarget, setMapClickTarget] = useState<'pickup' | 'dropoff'>('pickup');
 
+  // Trip direction
+  const [tripDirection, setTripDirection] = useState<'go' | 'return' | 'both'>('both');
+
   // Date / rides
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [rideInstances, setRideInstances] = useState<any[]>([]);
