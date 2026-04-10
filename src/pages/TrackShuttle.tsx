@@ -8,7 +8,7 @@ import MapView from '@/components/MapView';
 import {
   ChevronLeft, ChevronRight, MapPin, Clock, Car, RefreshCw,
   Radio, Users, Navigation, Phone, MessageCircle, Key, ArrowRight,
-  Shield, Share2, ExternalLink, Star
+  Shield, Share2, ExternalLink, Star, CheckCircle2
 } from 'lucide-react';
 import RideChat from '@/components/RideChat';
 import { useToast } from '@/hooks/use-toast';
@@ -514,37 +514,145 @@ const TrackShuttle = () => {
                   <span className="ms-auto font-semibold text-primary">{booking.total_price} EGP</span>
                 </div>
 
-                {/* Stops timeline (pickups before you) */}
-                {stopsBeforeYou > 0 && !isBoarded && (
+                {/* Live Stop Timeline */}
+                {passengerStops.length > 0 && (
                   <div className="border-t border-border pt-3">
-                    <p className="text-xs font-medium text-muted-foreground mb-2">
-                      {lang === 'ar' ? 'التوقفات قبلك على الطريق' : 'Stops before you on the route'}
+                    <p className="text-xs font-semibold text-foreground mb-3 flex items-center gap-1.5">
+                      <Navigation className="w-3.5 h-3.5 text-primary" />
+                      {lang === 'ar' ? 'مسار الرحلة المباشر' : 'Live Route Progress'}
                     </p>
-                    <div className="space-y-1.5">
-                      {passengerStops
-                        .filter(s => s.type === 'pickup' && !s.isCurrentUser && s.status !== 'boarded')
-                        .filter(s => {
-                          const myStop = passengerStops.find(ps => ps.isCurrentUser && ps.type === 'pickup');
-                          return myStop ? s.orderIndex < myStop.orderIndex : false;
-                        })
-                        .map((stop, i) => (
-                          <div key={i} className="flex items-center gap-2 text-xs">
-                            <div className="w-5 h-5 rounded-full bg-secondary/20 flex items-center justify-center text-[10px] font-bold text-secondary">
-                              {i + 1}
+                    <div className="relative">
+                      {/* Vertical line */}
+                      <div className="absolute start-[11px] top-3 bottom-3 w-0.5 bg-border" />
+                      
+                      {/* Route Origin */}
+                      <div className="flex items-center gap-3 mb-1 relative">
+                        <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center z-10 shrink-0">
+                          <MapPin className="w-3 h-3 text-white" />
+                        </div>
+                        <span className="text-xs text-muted-foreground truncate">
+                          {lang === 'ar' ? route?.origin_name_ar : route?.origin_name_en}
+                        </span>
+                      </div>
+
+                      {/* Passenger stops */}
+                      {passengerStops.filter(s => s.type === 'pickup').map((stop, i) => {
+                        const isBoarded = stop.status === 'boarded';
+                        const isSkipped = stop.status === 'cancelled';
+                        const isMe = stop.isCurrentUser;
+                        
+                        // Determine if driver has passed this stop
+                        const shuttleLoc = shuttle?.current_lat && shuttle?.current_lng
+                          ? { lat: shuttle.current_lat, lng: shuttle.current_lng }
+                          : null;
+                        
+                        const routeOrigin = { lat: route?.origin_lat || 0, lng: route?.origin_lng || 0 };
+                        const routeDest = { lat: route?.destination_lat || 0, lng: route?.destination_lng || 0 };
+                        const calcProg = (lat: number, lng: number) => {
+                          const dx = lat - routeOrigin.lat;
+                          const dy = lng - routeOrigin.lng;
+                          const rx = routeDest.lat - routeOrigin.lat;
+                          const ry = routeDest.lng - routeOrigin.lng;
+                          const len2 = rx * rx + ry * ry;
+                          return len2 === 0 ? 0 : (dx * rx + dy * ry) / len2;
+                        };
+                        
+                        const driverProgress = shuttleLoc ? calcProg(shuttleLoc.lat, shuttleLoc.lng) : -1;
+                        const isPassed = isBoarded || (driverProgress > stop.orderIndex && driverProgress >= 0);
+                        const isCurrent = !isPassed && !isSkipped && (
+                          i === 0 || passengerStops.filter(s => s.type === 'pickup').slice(0, i).every(
+                            prev => prev.status === 'boarded' || prev.status === 'cancelled'
+                          )
+                        );
+
+                        return (
+                          <div key={`${stop.userId}-${stop.type}-${i}`} className={`flex items-center gap-3 py-1.5 relative ${isMe ? '' : ''}`}>
+                            {/* Node */}
+                            <div className={`w-6 h-6 rounded-full flex items-center justify-center z-10 shrink-0 transition-all ${
+                              isPassed ? 'bg-green-500' :
+                              isSkipped ? 'bg-muted line-through' :
+                              isCurrent ? 'bg-primary ring-4 ring-primary/20 animate-pulse' :
+                              'bg-muted-foreground/20'
+                            }`}>
+                              {isPassed ? (
+                                <CheckCircle2 className="w-3.5 h-3.5 text-white" />
+                              ) : isCurrent ? (
+                                <span className="text-[10px] font-bold text-primary-foreground">📍</span>
+                              ) : (
+                                <span className="text-[10px] font-bold text-muted-foreground">{i + 1}</span>
+                              )}
                             </div>
-                            <span className="text-muted-foreground">{stop.name}</span>
-                            <span className="text-muted-foreground/50">·</span>
-                            <span className="text-muted-foreground/70">
-                              {lang === 'ar' ? 'صعود' : 'Pickup'}
+                            {/* Label */}
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-xs font-medium truncate ${
+                                isMe ? 'text-primary font-bold' : 
+                                isPassed ? 'text-muted-foreground' : 'text-foreground'
+                              }`}>
+                                {isMe ? (lang === 'ar' ? '⭐ أنت' : '⭐ You') : stop.name}
+                              </p>
+                              {isMe && stop.boardingCode && !booking?.boarded_at && (
+                                <p className="text-[10px] text-muted-foreground font-mono">
+                                  {lang === 'ar' ? 'رمز:' : 'Code:'} {stop.boardingCode}
+                                </p>
+                              )}
+                            </div>
+                            {/* Status badge */}
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0 ${
+                              isPassed ? 'bg-green-100 text-green-700' :
+                              isSkipped ? 'bg-destructive/10 text-destructive' :
+                              isCurrent ? 'bg-primary/10 text-primary' :
+                              'bg-muted text-muted-foreground'
+                            }`}>
+                              {isPassed ? (lang === 'ar' ? 'صعد ✓' : 'Boarded ✓') :
+                               isSkipped ? (lang === 'ar' ? 'تخطي' : 'Skipped') :
+                               isCurrent ? (lang === 'ar' ? 'التالي' : 'Next') :
+                               (lang === 'ar' ? 'في الانتظار' : 'Waiting')}
                             </span>
                           </div>
-                        ))}
-                      <div className="flex items-center gap-2 text-xs">
-                        <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center text-[10px] font-bold text-primary-foreground">
-                          ★
+                        );
+                      })}
+
+                      {/* Dropoff stops */}
+                      {passengerStops.filter(s => s.type === 'dropoff').length > 0 && (
+                        <div className="my-1.5 ms-9 text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
+                          {lang === 'ar' ? '— نزول —' : '— Drop-offs —'}
                         </div>
-                        <span className="font-medium text-foreground">
-                          {lang === 'ar' ? 'أنت' : 'You'}
+                      )}
+                      {passengerStops.filter(s => s.type === 'dropoff').map((stop, i) => {
+                        const isCompleted = stop.status === 'completed';
+                        const isMe = stop.isCurrentUser;
+                        return (
+                          <div key={`${stop.userId}-dropoff-${i}`} className="flex items-center gap-3 py-1.5 relative">
+                            <div className={`w-6 h-6 rounded-full flex items-center justify-center z-10 shrink-0 ${
+                              isCompleted ? 'bg-green-500' : 'bg-purple-200 dark:bg-purple-900'
+                            }`}>
+                              {isCompleted ? (
+                                <CheckCircle2 className="w-3.5 h-3.5 text-white" />
+                              ) : (
+                                <span className="text-[10px]">🏁</span>
+                              )}
+                            </div>
+                            <p className={`text-xs flex-1 min-w-0 truncate ${
+                              isMe ? 'text-primary font-bold' : 'text-foreground'
+                            }`}>
+                              {isMe ? (lang === 'ar' ? '⭐ أنت — نزول' : '⭐ You — Drop-off') : `${stop.name} — ${lang === 'ar' ? 'نزول' : 'Drop-off'}`}
+                            </p>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                              isCompleted ? 'bg-green-100 text-green-700' : 'bg-purple-50 text-purple-600 dark:bg-purple-900/50 dark:text-purple-300'
+                            }`}>
+                              {isCompleted ? (lang === 'ar' ? 'تم ✓' : 'Done ✓') : (lang === 'ar' ? 'قادم' : 'Upcoming')}
+                            </span>
+                          </div>
+                        );
+                      })}
+
+                      {/* Route Destination */}
+                      <div className="flex items-center gap-3 mt-1 relative">
+                        <div className="w-6 h-6 rounded-full bg-destructive flex items-center justify-center z-10 shrink-0">
+                          <MapPin className="w-3 h-3 text-white" />
+                        </div>
+                        <span className="text-xs text-muted-foreground truncate">
+                          {lang === 'ar' ? route?.destination_name_ar : route?.destination_name_en}
                         </span>
                       </div>
                     </div>
