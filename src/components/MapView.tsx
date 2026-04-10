@@ -10,9 +10,10 @@ const cairoCenter = { lat: 30.0444, lng: 31.2357 };
 const libraries: ('places')[] = ['places'];
 
 interface MapViewProps {
-  markers?: { lat: number; lng: number; label?: string; color?: 'red' | 'green' | 'blue' }[];
+  markers?: { lat: number; lng: number; label?: string; color?: 'red' | 'green' | 'blue' | 'orange' | 'purple' }[];
   origin?: { lat: number; lng: number };
   destination?: { lat: number; lng: number };
+  waypoints?: { lat: number; lng: number }[];
   showDirections?: boolean;
   center?: { lat: number; lng: number };
   zoom?: number;
