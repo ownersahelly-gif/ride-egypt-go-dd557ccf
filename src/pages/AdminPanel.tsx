@@ -45,6 +45,7 @@ const AdminPanel = () => {
 
   // Route form
   const [showRouteForm, setShowRouteForm] = useState(false);
+  const [editingRouteId, setEditingRouteId] = useState<string | null>(null);
   const [routeForm, setRouteForm] = useState({
     name_en: '', name_ar: '', origin_name_en: '', origin_name_ar: '',
     destination_name_en: '', destination_name_ar: '', origin_lat: 30.0444,
@@ -115,17 +116,38 @@ const AdminPanel = () => {
   };
 
   const createRoute = async () => {
-    const { error } = await supabase.from('routes').insert({
+    const routeData = {
       ...routeForm,
       description_en: `${routeForm.origin_name_en} to ${routeForm.destination_name_en}`,
       description_ar: `${routeForm.origin_name_ar} إلى ${routeForm.destination_name_ar}`,
       status: 'active',
-    });
-    if (error) { toast.error(error.message); return; }
-    toast.success('Route created!');
+    };
+    if (editingRouteId) {
+      const { error } = await supabase.from('routes').update(routeData).eq('id', editingRouteId);
+      if (error) { toast.error(error.message); return; }
+      toast.success(lang === 'ar' ? 'تم تحديث المسار' : 'Route updated!');
+    } else {
+      const { error } = await supabase.from('routes').insert(routeData);
+      if (error) { toast.error(error.message); return; }
+      toast.success('Route created!');
+    }
     setShowRouteForm(false);
+    setEditingRouteId(null);
     setRouteForm({ name_en: '', name_ar: '', origin_name_en: '', origin_name_ar: '', destination_name_en: '', destination_name_ar: '', origin_lat: 30.0444, origin_lng: 31.2357, destination_lat: 30.0131, destination_lng: 31.2089, price: 25, estimated_duration_minutes: 30 });
     fetchAllData();
+  };
+
+  const startEditRoute = (route: any) => {
+    setRouteForm({
+      name_en: route.name_en, name_ar: route.name_ar,
+      origin_name_en: route.origin_name_en, origin_name_ar: route.origin_name_ar,
+      destination_name_en: route.destination_name_en, destination_name_ar: route.destination_name_ar,
+      origin_lat: route.origin_lat, origin_lng: route.origin_lng,
+      destination_lat: route.destination_lat, destination_lng: route.destination_lng,
+      price: route.price, estimated_duration_minutes: route.estimated_duration_minutes,
+    });
+    setEditingRouteId(route.id);
+    setShowRouteForm(true);
   };
 
   const toggleRouteStatus = async (id: string, current: string) => {
