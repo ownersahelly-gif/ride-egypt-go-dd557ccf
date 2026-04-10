@@ -439,11 +439,10 @@ const DriverDashboard = () => {
                   const todayDow = now.getDay();
 
                   // Build trip slots: each schedule → separate Go and Back entries
-                  type TripSlot = { scheduleId: string; routeId: string; routeInfo: any; day: number; time: string; direction: 'go' | 'back'; dayOffset: number; dateStr: string; };
+                  type TripSlot = { scheduleId: string; routeId: string; routeInfo: any; day: number; time: string; direction: 'go' | 'back'; dayOffset: number; dateStr: string; isPast: boolean; };
                   const tripSlots: TripSlot[] = [];
 
                   for (const s of driverSchedules) {
-                    // Calculate date for next occurrence
                     const getNextDate = (targetDow: number) => {
                       let offset = targetDow - todayDow;
                       if (offset < 0) offset += 7;
@@ -454,39 +453,34 @@ const DriverDashboard = () => {
                     };
                     const { offset, dateStr } = getNextDate(s.day_of_week);
 
-                    // Go trip
+                    // Go trip - always show, mark as past if needed
                     if (s.departure_time) {
                       const isPast = offset === 0 && s.departure_time?.slice(0, 5) < currentTime;
-                      if (!isPast) {
-                        tripSlots.push({
-                          scheduleId: s.id, routeId: s.route_id, routeInfo: s.routes,
-                          day: s.day_of_week, time: s.departure_time?.slice(0, 5),
-                          direction: 'go', dayOffset: offset, dateStr,
-                        });
-                      }
+                      tripSlots.push({
+                        scheduleId: s.id, routeId: s.route_id, routeInfo: s.routes,
+                        day: s.day_of_week, time: s.departure_time?.slice(0, 5),
+                        direction: 'go', dayOffset: offset, dateStr, isPast,
+                      });
                     }
                     // Back trip
                     if (s.return_time) {
                       const isPast = offset === 0 && s.return_time?.slice(0, 5) < currentTime;
-                      if (!isPast) {
-                        tripSlots.push({
-                          scheduleId: s.id, routeId: s.route_id, routeInfo: s.routes,
-                          day: s.day_of_week, time: s.return_time?.slice(0, 5),
-                          direction: 'back', dayOffset: offset, dateStr,
-                        });
-                      }
+                      tripSlots.push({
+                        scheduleId: s.id, routeId: s.route_id, routeInfo: s.routes,
+                        day: s.day_of_week, time: s.return_time?.slice(0, 5),
+                        direction: 'back', dayOffset: offset, dateStr, isPast,
+                      });
                     }
                   }
 
-                  // Sort: today first, then by day offset, then by time
+                  // Sort: non-past first, then by day offset, then by time
                   tripSlots.sort((a, b) => {
+                    if (a.isPast !== b.isPast) return a.isPast ? 1 : -1;
                     if (a.dayOffset !== b.dayOffset) return a.dayOffset - b.dayOffset;
                     return a.time.localeCompare(b.time);
                   });
 
-                  const displaySlots = showAllUpcoming ? tripSlots : tripSlots.slice(0, 3);
-
-                  if (tripSlots.length === 0) return null;
+                  const displaySlots = showAllUpcoming ? tripSlots : tripSlots.slice(0, 4);
 
                   const getDayLabel = (offset: number, dow: number) => {
                     if (offset === 0) return lang === 'ar' ? 'اليوم' : 'Today';
@@ -516,7 +510,7 @@ const DriverDashboard = () => {
                         });
 
                         const isToday = slot.dayOffset === 0;
-                        const canStart = isToday && shuttle.status === 'active' && slotBookings.length > 0;
+                        const canStart = isToday && !slot.isPast && shuttle.status === 'active' && slotBookings.length > 0;
 
                         const routeOrigin = { lat: slot.routeInfo?.origin_lat || 0, lng: slot.routeInfo?.origin_lng || 0 };
                         const routeDestination = { lat: slot.routeInfo?.destination_lat || 0, lng: slot.routeInfo?.destination_lng || 0 };
@@ -530,11 +524,12 @@ const DriverDashboard = () => {
                         return (
                           <div key={key} className={`bg-card border rounded-2xl overflow-hidden transition-all ${
                             slot.direction === 'go' ? 'border-green-200' : 'border-blue-200'
-                          }`}>
-                            <button
-                              onClick={() => setExpandedUpcoming(isExpanded ? null : key)}
-                              className="w-full p-4 text-start hover:bg-muted/30 transition-colors"
-                            >
+                          } ${slot.isPast ? 'opacity-50' : ''}`}>
+                            <div className="flex items-stretch">
+                              <button
+                                onClick={() => setExpandedUpcoming(isExpanded ? null : key)}
+                                className="flex-1 p-4 text-start hover:bg-muted/30 transition-colors"
+                              >
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold ${
@@ -563,8 +558,15 @@ const DriverDashboard = () => {
                                 </div>
                               </div>
                             </button>
-
-                            {/* Expanded detail */}
+                              {/* Delete button on card */}
+                              <button
+                                onClick={() => deleteSchedule(slot.scheduleId)}
+                                className="px-3 flex items-center justify-center border-s border-border hover:bg-destructive/10 transition-colors"
+                                title={lang === 'ar' ? 'حذف' : 'Delete'}
+                              >
+                                <Trash2 className="w-4 h-4 text-destructive/60 hover:text-destructive" />
+                              </button>
+                            </div>
                             {isExpanded && (
                               <div className="border-t border-border p-4 space-y-3">
                                 {/* Status message */}
