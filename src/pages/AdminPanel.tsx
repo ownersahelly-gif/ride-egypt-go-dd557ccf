@@ -580,31 +580,45 @@ const AdminPanel = () => {
                   <div className="sm:col-span-2 space-y-2">
                     <Label className="flex items-center gap-2">
                       <MapPin className="w-4 h-4 text-green-500" />
-                      {lang === 'ar' ? 'نقطة الانطلاق (انقر على الخريطة)' : 'Origin (click on map)'}
+                      {lang === 'ar' ? 'نقطة الانطلاق' : 'Origin'}
                     </Label>
-                    <MapView
-                      className="h-[200px]"
-                      center={{ lat: routeForm.origin_lat, lng: routeForm.origin_lng }}
-                      zoom={12}
-                      markers={[{ lat: routeForm.origin_lat, lng: routeForm.origin_lng, label: 'A', color: 'green' }]}
-                      onMapClick={(lat, lng) => setRouteForm(p => ({ ...p, origin_lat: parseFloat(lat.toFixed(6)), origin_lng: parseFloat(lng.toFixed(6)) }))}
-                      showUserLocation={false}
+                    <PlacesAutocomplete
+                      placeholder={lang === 'ar' ? 'ابحث عن نقطة الانطلاق...' : 'Search origin location...'}
+                      onSelect={(place) => setRouteForm(p => ({ ...p, origin_lat: parseFloat(place.lat.toFixed(6)), origin_lng: parseFloat(place.lng.toFixed(6)), origin_name_en: p.origin_name_en || place.name, origin_name_ar: p.origin_name_ar || place.name }))}
+                      iconColor="text-green-500"
                     />
+                    <div className="h-[280px] w-full overflow-hidden rounded-lg border border-border">
+                      <MapView
+                        className="h-full w-full"
+                        center={{ lat: routeForm.origin_lat, lng: routeForm.origin_lng }}
+                        zoom={13}
+                        markers={[{ lat: routeForm.origin_lat, lng: routeForm.origin_lng, label: 'A', color: 'green' }]}
+                        onMapClick={(lat, lng) => setRouteForm(p => ({ ...p, origin_lat: parseFloat(lat.toFixed(6)), origin_lng: parseFloat(lng.toFixed(6)) }))}
+                        showUserLocation={false}
+                      />
+                    </div>
                     <p className="text-xs text-muted-foreground">{routeForm.origin_lat.toFixed(4)}, {routeForm.origin_lng.toFixed(4)}</p>
                   </div>
                   <div className="sm:col-span-2 space-y-2">
                     <Label className="flex items-center gap-2">
                       <MapPin className="w-4 h-4 text-destructive" />
-                      {lang === 'ar' ? 'نقطة الوصول (انقر على الخريطة)' : 'Destination (click on map)'}
+                      {lang === 'ar' ? 'نقطة الوصول' : 'Destination'}
                     </Label>
-                    <MapView
-                      className="h-[200px]"
-                      center={{ lat: routeForm.destination_lat, lng: routeForm.destination_lng }}
-                      zoom={12}
-                      markers={[{ lat: routeForm.destination_lat, lng: routeForm.destination_lng, label: 'B', color: 'red' }]}
-                      onMapClick={(lat, lng) => setRouteForm(p => ({ ...p, destination_lat: parseFloat(lat.toFixed(6)), destination_lng: parseFloat(lng.toFixed(6)) }))}
-                      showUserLocation={false}
+                    <PlacesAutocomplete
+                      placeholder={lang === 'ar' ? 'ابحث عن نقطة الوصول...' : 'Search destination location...'}
+                      onSelect={(place) => setRouteForm(p => ({ ...p, destination_lat: parseFloat(place.lat.toFixed(6)), destination_lng: parseFloat(place.lng.toFixed(6)), destination_name_en: p.destination_name_en || place.name, destination_name_ar: p.destination_name_ar || place.name }))}
+                      iconColor="text-destructive"
                     />
+                    <div className="h-[280px] w-full overflow-hidden rounded-lg border border-border">
+                      <MapView
+                        className="h-full w-full"
+                        center={{ lat: routeForm.destination_lat, lng: routeForm.destination_lng }}
+                        zoom={13}
+                        markers={[{ lat: routeForm.destination_lat, lng: routeForm.destination_lng, label: 'B', color: 'red' }]}
+                        onMapClick={(lat, lng) => setRouteForm(p => ({ ...p, destination_lat: parseFloat(lat.toFixed(6)), destination_lng: parseFloat(lng.toFixed(6)) }))}
+                        showUserLocation={false}
+                      />
+                    </div>
                     <p className="text-xs text-muted-foreground">{routeForm.destination_lat.toFixed(4)}, {routeForm.destination_lng.toFixed(4)}</p>
                   </div>
                   <div className="space-y-2">
@@ -736,7 +750,7 @@ const AdminPanel = () => {
                           onSelect={(place) => setStopForm(p => ({ ...p, lat: parseFloat(place.lat.toFixed(6)), lng: parseFloat(place.lng.toFixed(6)), name_en: p.name_en || place.name, name_ar: p.name_ar || place.name }))}
                           iconColor="text-primary"
                         />
-                        <div className="h-[200px] w-full overflow-hidden rounded-lg border border-border bg-muted">
+                        <div className="h-[250px] w-full overflow-hidden rounded-lg border border-border bg-muted">
                           <MapView
                             className="h-full w-full"
                             center={stopForm.lat !== 0 ? { lat: stopForm.lat, lng: stopForm.lng } : { lat: route.origin_lat, lng: route.origin_lng }}
