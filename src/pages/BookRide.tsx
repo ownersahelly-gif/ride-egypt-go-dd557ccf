@@ -369,6 +369,13 @@ const BookRide = () => {
   const [uploadingProof, setUploadingProof] = useState(false);
   const [instapayPhone, setInstapayPhone] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const dropoffRef = useRef<HTMLDivElement>(null);
+
+  const scrollToDropoff = () => {
+    setTimeout(() => {
+      dropoffRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 200);
+  };
 
   // Fetch InstaPay phone number
   useEffect(() => {
