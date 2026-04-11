@@ -59,7 +59,9 @@ const TrackShuttle = () => {
   const [rideBookings, setRideBookings] = useState<any[]>([]);
   const [passengerStops, setPassengerStops] = useState<PassengerStop[]>([]);
 
-  // ETA
+  // Smooth marker interpolation for driver position
+  const { position: smoothDriverPos, updatePosition: updateSmoothPos } = useSmoothMarker(1200);
+
   const [etaMinutes, setEtaMinutes] = useState<number | null>(null);
   const [stopsBeforeYou, setStopsBeforeYou] = useState(0);
   const [notificationSent, setNotificationSent] = useState(false);
