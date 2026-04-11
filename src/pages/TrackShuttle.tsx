@@ -229,7 +229,7 @@ const TrackShuttle = () => {
 
     const ds = new google.maps.DirectionsService();
 
-    if (shuttle?.current_lat && shuttle?.current_lng && msUntilDeparture <= 0) {
+    if (shuttle?.current_lat && shuttle?.current_lng && shuttle?.status === 'active') {
       // Trip has started — use live shuttle position
       const waypoints = stopsBeforeMe.map(s => ({
         location: new google.maps.LatLng(s.lat, s.lng),
