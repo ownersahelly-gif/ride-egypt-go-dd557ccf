@@ -124,6 +124,9 @@ const BookRide = () => {
   // Route directions result for on-route checking
   const [routeDirections, setRouteDirections] = useState<any>(null);
 
+  // Route stops for waypoints
+  const [routeStops, setRouteStops] = useState<any[]>([]);
+
   // Saved locations
   const [savedLocations, setSavedLocations] = useState<any[]>([]);
 
@@ -207,6 +210,14 @@ const BookRide = () => {
     setUseBundle(false);
     setTripDirection('both');
     setStep('details');
+
+    // Fetch stops for this route
+    const { data: stops } = await supabase
+      .from('stops')
+      .select('*')
+      .eq('route_id', ride.route_id)
+      .order('stop_order');
+    setRouteStops(stops || []);
 
     if (user && ride.route_id) {
       // Fetch saved locations, bundles, and active bundle purchases in parallel
