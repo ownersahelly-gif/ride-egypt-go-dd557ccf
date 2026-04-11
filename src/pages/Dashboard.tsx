@@ -77,18 +77,14 @@ const Dashboard = () => {
   const [shuttleInfo, setShuttleInfo] = useState<any>(null);
 
   // Detail step states
-  const [pickupMode, setPickupMode] = useState<'start' | 'nearby'>('start');
-  const [customPickup, setCustomPickup] = useState<PointSelection>(null);
-  const [validatingPickup, setValidatingPickup] = useState(false);
-  const [pickupResult, setPickupResult] = useState<{ ok: boolean; minutes: number; onRoute: boolean } | null>(null);
-  const [dropoffMode, setDropoffMode] = useState<'end' | 'nearby'>('end');
-  const [customDropoff, setCustomDropoff] = useState<PointSelection>(null);
-  const [validatingDropoff, setValidatingDropoff] = useState(false);
-  const [dropoffResult, setDropoffResult] = useState<{ ok: boolean; minutes: number; onRoute: boolean } | null>(null);
-  const [mapClickTarget, setMapClickTarget] = useState<'pickup' | 'dropoff'>('pickup');
+  const [pickupMode, setPickupMode] = useState<'start' | 'stop'>('start');
+  const [selectedPickupStop, setSelectedPickupStop] = useState<any>(null);
+  const [dropoffMode, setDropoffMode] = useState<'end' | 'stop'>('end');
+  const [selectedDropoffStop, setSelectedDropoffStop] = useState<any>(null);
   const [tripDirection, setTripDirection] = useState<'go' | 'return' | 'both'>('both');
   const [routeDirections, setRouteDirections] = useState<any>(null);
-  const [nearestRoutePoint, setNearestRoutePoint] = useState<{ lat: number; lng: number } | null>(null);
+  const [routeStops, setRouteStops] = useState<any[]>([]);
+  const [availableDirections, setAvailableDirections] = useState<('go' | 'return')[]>([]);
 
   // Saved locations & bundles
   const [savedLocations, setSavedLocations] = useState<any[]>([]);
@@ -247,15 +243,38 @@ const Dashboard = () => {
     setSelectedRide(ride);
     setDriverProfile(ride.driver_profile);
     setShuttleInfo(ride.shuttle_info);
-    setCustomPickup(null);
-    setCustomDropoff(null);
-    setPickupResult(null);
-    setDropoffResult(null);
+    setSelectedPickupStop(null);
+    setSelectedDropoffStop(null);
     setPickupMode('start');
     setDropoffMode('end');
     setUseBundle(false);
-    setTripDirection('both');
     setStep('details');
+
+    // Fetch stops for this route
+    const { data: stops } = await supabase
+      .from('stops')
+      .select('*')
+      .eq('route_id', ride.route_id)
+      .order('stop_order');
+    setRouteStops(stops || []);
+
+    // Check available directions for this route+date
+    const { data: allRides } = await supabase
+      .from('ride_instances')
+      .select('direction')
+      .eq('route_id', ride.route_id)
+      .eq('ride_date', ride.ride_date)
+      .eq('status', 'scheduled');
+    const dirs = [...new Set((allRides || []).map(r => r.direction))] as ('go' | 'return')[];
+    setAvailableDirections(dirs);
+    // Set default trip direction based on available directions
+    if (dirs.length === 1) {
+      setTripDirection(dirs[0]);
+    } else if (dirs.includes('go') && dirs.includes('return')) {
+      setTripDirection('both');
+    } else {
+      setTripDirection(ride.direction || 'go');
+    }
 
     if (user && ride.route_id) {
       const [{ data: savedLocs }, { data: bundles }, { data: purchases }] = await Promise.all([
