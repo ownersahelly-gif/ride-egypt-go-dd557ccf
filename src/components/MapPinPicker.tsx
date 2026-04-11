@@ -122,7 +122,7 @@ const MapPinPicker = ({ activePin, origin, destination, onConfirm, onCancel, cla
     <div className={`relative h-full w-full overflow-hidden ${className}`}>
       <GoogleMap
         mapContainerStyle={containerStyle}
-        defaultCenter={getInitialCenter()}
+        center={activePin ? undefined : getInitialCenter()}
         zoom={14}
         onLoad={onLoad}
         options={{
