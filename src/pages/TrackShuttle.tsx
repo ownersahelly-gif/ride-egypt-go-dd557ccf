@@ -43,6 +43,16 @@ const TrackShuttle = () => {
   const [isLive, setIsLive] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [sosActive, setSosActive] = useState(false);
+  const [driverStopStatus, setDriverStopStatus] = useState<{
+    atStopId?: string;
+    atStopNameEn?: string;
+    atStopNameAr?: string;
+    atStopIndex?: number;
+    headingToStopId?: string;
+    headingToStopNameEn?: string;
+    headingToStopNameAr?: string;
+    headingToStopIndex?: number;
+  } | null>(null);
 
   // All bookings on this ride (for calculating stops before current user)
   const [rideBookings, setRideBookings] = useState<any[]>([]);
@@ -301,10 +311,26 @@ const TrackShuttle = () => {
     const channel = supabase
       .channel(`shuttle-live-${shuttle.id}`)
       .on('broadcast', { event: 'driver-location' }, (payload) => {
-        const { lat, lng } = payload.payload;
+        const { lat, lng, stopId, stopNameEn, stopNameAr, stopIndex, headingToStopId, headingToStopNameEn, headingToStopNameAr, headingToStopIndex } = payload.payload;
         if (lat && lng) {
           setShuttle((prev: any) => ({ ...prev, current_lat: lat, current_lng: lng, status: 'active' }));
           setIsLive(true);
+        }
+        // Update stop-based status from boarding code anchoring
+        if (stopId) {
+          setDriverStopStatus({
+            atStopId: stopId,
+            atStopNameEn: stopNameEn,
+            atStopNameAr: stopNameAr,
+            atStopIndex: stopIndex,
+          });
+        } else if (headingToStopId) {
+          setDriverStopStatus({
+            headingToStopId,
+            headingToStopNameEn,
+            headingToStopNameAr,
+            headingToStopIndex,
+          });
         }
       })
       .subscribe();
