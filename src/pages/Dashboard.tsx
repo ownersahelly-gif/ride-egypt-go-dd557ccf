@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -6,18 +6,16 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import MapView from '@/components/MapView';
-import MapPinPicker from '@/components/MapPinPicker';
 import PlacesAutocomplete from '@/components/PlacesAutocomplete';
 import BottomNav from '@/components/BottomNav';
 import { useBookingNotifications } from '@/hooks/useBookingNotifications';
 import { useRideMessageNotifications } from '@/hooks/useRideMessageNotifications';
 import {
   MapPin, Clock, Users, ArrowRight, Calendar, AlertCircle, Car,
-  User as UserIcon, Loader2, CheckCircle2, XCircle, Navigation,
-  Upload, Image as ImageIcon, ListOrdered, Phone, History, Package,
-  Bookmark, Globe, LogOut, Shield, ChevronLeft, ChevronRight
+  User as UserIcon, Loader2, CheckCircle2,
+  Upload, ListOrdered, History, Package,
+  Globe, LogOut, Shield, ChevronLeft, ChevronRight
 } from 'lucide-react';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
