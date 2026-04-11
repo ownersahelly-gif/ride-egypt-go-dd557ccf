@@ -48,7 +48,7 @@ const DriverApply = () => {
 
   return (
     <div className="h-screen bg-surface flex flex-col overflow-hidden">
-      <header className="bg-card border-b border-border shrink-0 z-40">
+      <header className="bg-card border-b border-border shrink-0 z-40 safe-area-top">
         <div className="container mx-auto flex items-center h-16 px-4 gap-4">
           <Link to="/dashboard"><Button variant="ghost" size="icon"><Back className="w-5 h-5" /></Button></Link>
           <h1 className="text-lg font-bold text-foreground">{t('driver.applyTitle')}</h1>

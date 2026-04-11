@@ -98,7 +98,7 @@ const CarpoolPost = () => {
 
   return (
     <div className="h-screen bg-background flex flex-col overflow-hidden" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
-      <div className="bg-primary text-primary-foreground px-4 pt-12 pb-6">
+      <div className="bg-primary text-primary-foreground px-4 pt-12 pb-6 shrink-0 safe-area-top">
         <button onClick={() => navigate('/carpool')} className="mb-3"><Back className="w-6 h-6" /></button>
         <h1 className="text-xl font-bold">{lang === 'ar' ? 'أضف رحلة جديدة' : 'Post a Ride'}</h1>
       </div>

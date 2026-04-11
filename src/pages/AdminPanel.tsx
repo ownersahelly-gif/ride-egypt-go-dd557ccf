@@ -538,7 +538,7 @@ const AdminPanel = () => {
   return (
     <div className="h-screen bg-surface flex flex-col overflow-hidden">
       {/* Header */}
-      <header className="bg-card border-b border-border shrink-0 z-40">
+      <header className="bg-card border-b border-border shrink-0 z-40 safe-area-top">
         <div className="container mx-auto flex items-center justify-between h-16 px-4">
           <div className="flex items-center gap-3">
             <Shield className="w-6 h-6 text-primary" />
