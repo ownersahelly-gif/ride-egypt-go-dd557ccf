@@ -103,7 +103,7 @@ const CarpoolPost = () => {
         <h1 className="text-xl font-bold">{lang === 'ar' ? 'أضف رحلة جديدة' : 'Post a Ride'}</h1>
       </div>
 
-      <div className="p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-24">
         {/* Route */}
         <Card>
           <CardHeader><CardTitle className="text-base flex items-center gap-2"><MapPin className="w-4 h-4" />{lang === 'ar' ? 'المسار' : 'Route'}</CardTitle></CardHeader>

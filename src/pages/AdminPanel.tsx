@@ -552,7 +552,7 @@ const AdminPanel = () => {
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-6">
+      <div className="flex-1 overflow-y-auto container mx-auto px-4 py-6 pb-24">
         {/* Tabs */}
         <div className="flex gap-1 bg-card border border-border rounded-xl p-1 mb-6 overflow-x-auto">
           {tabs.map(({ key, icon: Icon, label }) => (

@@ -425,7 +425,7 @@ const DriverDashboard = () => {
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-6 max-w-2xl">
+      <div className="flex-1 overflow-y-auto container mx-auto px-4 py-6 max-w-2xl pb-24">
         {!shuttle && (
           <div className="bg-card rounded-2xl border border-border p-12 text-center">
             <Clock className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />

@@ -135,7 +135,7 @@ const CarpoolVerify = () => {
         </p>
       </div>
 
-      <div className="p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-24">
         <Card>
           <CardHeader><CardTitle className="text-base">{lang === 'ar' ? 'معلومات السيارة' : 'Vehicle Info'}</CardTitle></CardHeader>
           <CardContent className="space-y-3">

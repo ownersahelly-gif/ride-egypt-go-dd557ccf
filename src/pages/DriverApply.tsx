@@ -55,7 +55,7 @@ const DriverApply = () => {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 max-w-lg">
+      <main className="flex-1 overflow-y-auto container mx-auto px-4 py-8 max-w-lg pb-24">
         <div className="flex justify-center mb-6">
           <div className="w-16 h-16 rounded-full bg-secondary/10 flex items-center justify-center">
             <Car className="w-8 h-8 text-secondary" />

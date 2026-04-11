@@ -90,7 +90,7 @@ const RequestRoute = () => {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 max-w-2xl space-y-6">
+      <main className="flex-1 overflow-y-auto container mx-auto px-4 py-8 max-w-2xl space-y-6 pb-24">
         {/* Map */}
         <MapPinPicker
           className="h-[350px] border border-border rounded-2xl"
