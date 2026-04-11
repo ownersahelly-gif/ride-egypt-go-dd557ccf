@@ -381,7 +381,7 @@ const TrackShuttle = () => {
 
   // Determine if trip has started based on shuttle status (driver sets it to 'active' when starting)
   const shuttleIsActive = shuttle?.status === 'active';
-  const hasLiveGps = !!(shuttle?.current_lat && shuttle?.current_lng && shuttleIsActive);
+  const hasLiveGps = !!(smoothDriverPos && shuttleIsActive);
   const isBoarded = booking?.status === 'boarded';
 
   // Build tracking markers: shuttle → stops before user → YOU
@@ -396,9 +396,9 @@ const TrackShuttle = () => {
 
   const markers: { lat: number; lng: number; label?: string; color?: 'red' | 'green' | 'blue' | 'orange' | 'purple' }[] = [];
 
-  // Shuttle marker — only show if trip has started
-  if (hasLiveGps) {
-    markers.push({ lat: shuttle.current_lat, lng: shuttle.current_lng, label: '🚐', color: 'blue' });
+  // Shuttle marker — use smoothly interpolated position
+  if (hasLiveGps && smoothDriverPos) {
+    markers.push({ lat: smoothDriverPos.lat, lng: smoothDriverPos.lng, label: '🚐', color: 'blue' });
   }
 
   // Intermediate stop markers (other passengers' pickups before the user)
@@ -412,8 +412,8 @@ const TrackShuttle = () => {
   }
 
   // Directions: shuttle → (intermediate stops) → user's pickup (only when live)
-  const trackOrigin = hasLiveGps
-    ? { lat: shuttle.current_lat, lng: shuttle.current_lng } : undefined;
+  const trackOrigin = (hasLiveGps && smoothDriverPos)
+    ? { lat: smoothDriverPos.lat, lng: smoothDriverPos.lng } : undefined;
   const trackDestination = (myPickupLat && myPickupLng)
     ? { lat: myPickupLat, lng: myPickupLng } : undefined;
   const trackWaypoints = stopsBeforeMe.map(s => ({ lat: s.lat, lng: s.lng }));
