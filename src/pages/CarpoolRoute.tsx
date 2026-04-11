@@ -184,7 +184,7 @@ const CarpoolRoute = () => {
         )}
       </div>
 
-      <div className="p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-24">
         {/* Route Info */}
         <Card>
           <CardContent className="p-4 space-y-3">
