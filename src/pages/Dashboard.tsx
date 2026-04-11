@@ -288,152 +288,52 @@ const Dashboard = () => {
     }
   };
 
-  // Validate custom point using Google Directions driving distance
-  /** Find nearest point on route polyline (straight-line) for the visual connection line */
-  const findNearestRoutePoint = (point: { lat: number; lng: number }): { nearest: { lat: number; lng: number } | null } => {
-    let nearest: { lat: number; lng: number } | null = null;
-    let minDist = Infinity;
-    if (routeDirections) {
-      const path = routeDirections.routes?.[0]?.overview_path;
-      if (path && path.length > 1) {
-        for (let i = 0; i < path.length - 1; i++) {
-          const a = { lat: path[i].lat(), lng: path[i].lng() };
-          const b = { lat: path[i + 1].lat(), lng: path[i + 1].lng() };
-          const projected = closestPointOnSegment(point, a, b);
-          const d = haversineDistanceKm(point, projected);
-          if (d < minDist) { minDist = d; nearest = projected; }
-        }
-      } else if (path && path.length === 1) {
-        nearest = { lat: path[0].lat(), lng: path[0].lng() };
-      }
+  // Find closest stop to a searched location
+  const findClosestStop = (point: { lat: number; lng: number }, stopType?: 'pickup' | 'dropoff'): any | null => {
+    if (!routeStops.length) return null;
+    let filteredStops = routeStops;
+    if (stopType === 'pickup') {
+      filteredStops = routeStops.filter(s => s.stop_type === 'pickup' || s.stop_type === 'both');
+    } else if (stopType === 'dropoff') {
+      filteredStops = routeStops.filter(s => s.stop_type === 'dropoff' || s.stop_type === 'both');
     }
-    if (!nearest && selectedRide?.routes) {
-      const dO = haversineDistanceKm(point, { lat: selectedRide.routes.origin_lat, lng: selectedRide.routes.origin_lng });
-      const dD = haversineDistanceKm(point, { lat: selectedRide.routes.destination_lat, lng: selectedRide.routes.destination_lng });
-      nearest = dO < dD
-        ? { lat: selectedRide.routes.origin_lat, lng: selectedRide.routes.origin_lng }
-        : { lat: selectedRide.routes.destination_lat, lng: selectedRide.routes.destination_lng };
+    if (!filteredStops.length) filteredStops = routeStops;
+    let closest = filteredStops[0];
+    let minDist = haversineDistanceKm(point, { lat: closest.lat, lng: closest.lng });
+    for (let i = 1; i < filteredStops.length; i++) {
+      const d = haversineDistanceKm(point, { lat: filteredStops[i].lat, lng: filteredStops[i].lng });
+      if (d < minDist) { minDist = d; closest = filteredStops[i]; }
     }
-    return { nearest };
+    return closest;
   };
 
-  const MAX_DISTANCE_KM = 0.7;
-  const validateCustomPoint = useCallback(async (
-    point: { lat: number; lng: number; name: string },
-    type: 'pickup' | 'dropoff',
-  ) => {
-    if (!selectedRide?.routes) return;
-    const setValidating = type === 'pickup' ? setValidatingPickup : setValidatingDropoff;
-    const setResult = type === 'pickup' ? setPickupResult : setDropoffResult;
-    const setCustom = type === 'pickup' ? setCustomPickup : setCustomDropoff;
-    setValidating(true);
-    setResult(null);
-    setCustom(point);
-
-    const { nearest } = findNearestRoutePoint(point);
-    setNearestRoutePoint(nearest);
-
-    const isReturnRide = selectedRide.direction === 'return';
-    const origin = isReturnRide
-      ? { lat: selectedRide.routes.destination_lat, lng: selectedRide.routes.destination_lng }
-      : { lat: selectedRide.routes.origin_lat, lng: selectedRide.routes.origin_lng };
-    const destination = isReturnRide
-      ? { lat: selectedRide.routes.origin_lat, lng: selectedRide.routes.origin_lng }
-      : { lat: selectedRide.routes.destination_lat, lng: selectedRide.routes.destination_lng };
-
-    const getRouteDistanceKm = (result: google.maps.DirectionsResult | null) =>
-      (result?.routes?.[0]?.legs || []).reduce((sum, leg) => sum + ((leg.distance?.value || 0) / 1000), 0);
-
-    try {
-      if (typeof google === 'undefined' || !google?.maps?.DirectionsService) throw new Error('Directions unavailable');
-
-      const directionsService = new google.maps.DirectionsService();
-      const getDirections = (waypoints?: google.maps.DirectionsWaypoint[]) =>
-        new Promise<google.maps.DirectionsResult | null>((resolve) => {
-          directionsService.route({
-            origin,
-            destination,
-            travelMode: google.maps.TravelMode.DRIVING,
-            waypoints,
-            optimizeWaypoints: false,
-          }, (res, status) => {
-            resolve(status === 'OK' ? res : null);
-          });
-        });
-
-      const baseResult = routeDirections || await getDirections();
-      const waypointResult = await getDirections([{ location: point, stopover: true }]);
-
-      const baseDistanceKm = getRouteDistanceKm(baseResult);
-      const withWaypointDistanceKm = getRouteDistanceKm(waypointResult);
-      const extraDistanceKm = Math.max(0, withWaypointDistanceKm - baseDistanceKm);
-      const ok = extraDistanceKm <= MAX_DISTANCE_KM;
-      const onRoute = extraDistanceKm <= 0.1;
-
-      setResult({ ok, minutes: Math.round(extraDistanceKm * 10) / 10, onRoute });
-
-      if (!ok) {
-        toast({
-          title: lang === 'ar' ? 'موقع بعيد عن المسار' : 'Too far from route',
-          description: lang === 'ar'
-            ? 'هذا الموقع بعيد جداً عن المسار، يرجى اختيار موقع أقرب'
-            : 'This location is too far from the route, please pick a closer spot',
-          variant: 'destructive',
-        });
+  const handleSearchAndMatchStop = (place: { lat: number; lng: number; name: string }, type: 'pickup' | 'dropoff') => {
+    const closest = findClosestStop(place, type);
+    if (closest) {
+      if (type === 'pickup') {
+        setSelectedPickupStop(closest);
+        setPickupMode('stop');
       } else {
-        toast({
-          title: lang === 'ar' ? '✅ موقع مقبول' : '✅ Location accepted',
-          description: lang === 'ar'
-            ? `إضافة هذا الموقع تزيد الرحلة ${extraDistanceKm.toFixed(1)} كم`
-            : `This point adds ${extraDistanceKm.toFixed(1)} km to the route`,
-        });
+        setSelectedDropoffStop(closest);
+        setDropoffMode('stop');
       }
-    } catch {
-      const fallbackKm = nearest ? haversineDistanceKm(point, nearest) * 2 : 999;
-      const ok = fallbackKm <= MAX_DISTANCE_KM;
-      const onRoute = fallbackKm <= 0.1;
-      setResult({ ok, minutes: Math.round(fallbackKm * 10) / 10, onRoute });
-    } finally {
-      setValidating(false);
+      const dist = haversineDistanceKm(place, { lat: closest.lat, lng: closest.lng });
+      toast({
+        title: lang === 'ar' ? '📍 أقرب نقطة توقف' : '📍 Nearest stop matched',
+        description: lang === 'ar'
+          ? `${lang === 'ar' ? closest.name_ar : closest.name_en} (${dist.toFixed(1)} كم)`
+          : `${closest.name_en} (${dist.toFixed(1)} km away)`,
+      });
     }
-  }, [selectedRide, routeDirections, lang, toast]);
+  };
 
-  const handleMapPinConfirm = useCallback((target: 'pickup' | 'dropoff', point: { lat: number; lng: number; name: string }) => {
-    validateCustomPoint(point, target);
-  }, [validateCustomPoint]);
+  const isPickupValid = true; // Always valid - either start point or a predefined stop
+  const isDropoffValid = true;
 
-  const isPickupValid = pickupMode === 'start' ? true : (!!customPickup && pickupResult?.ok === true);
-  const isDropoffValid = dropoffMode === 'end' ? true : (!!customDropoff && dropoffResult?.ok === true);
-
-  // Dynamic price calculation using real driving distance
-  const [detailDrivingDistKm, setDetailDrivingDistKm] = useState<number | null>(null);
-  useEffect(() => {
-    if (!selectedRide?.routes) { setDetailDrivingDistKm(null); return; }
-    const route = selectedRide.routes;
-    const pLat = pickupMode === 'start' ? route.origin_lat : (customPickup?.lat ?? route.origin_lat);
-    const pLng = pickupMode === 'start' ? route.origin_lng : (customPickup?.lng ?? route.origin_lng);
-    const dLat = dropoffMode === 'end' ? route.destination_lat : (customDropoff?.lat ?? route.destination_lat);
-    const dLng = dropoffMode === 'end' ? route.destination_lng : (customDropoff?.lng ?? route.destination_lng);
-    const from = { lat: pLat, lng: pLng };
-    const to = { lat: dLat, lng: dLng };
-    if (typeof google === 'undefined' || !google?.maps?.DirectionsService) {
-      setDetailDrivingDistKm(haversineDistanceKm(from, to));
-      return;
-    }
-    const ds = new google.maps.DirectionsService();
-    ds.route({ origin: from, destination: to, travelMode: google.maps.TravelMode.DRIVING }, (res, status) => {
-      if (status === 'OK' && res?.routes?.[0]?.legs?.[0]?.distance?.value) {
-        setDetailDrivingDistKm(res.routes[0].legs[0].distance.value / 1000);
-      } else {
-        setDetailDrivingDistKm(haversineDistanceKm(from, to));
-      }
-    });
-  }, [selectedRide?.route_id, pickupMode, dropoffMode, customPickup?.lat, customPickup?.lng, customDropoff?.lat, customDropoff?.lng]);
-
-  const dynamicPrice = detailDrivingDistKm !== null ? Math.max(10, Math.round(detailDrivingDistKm * pricePerKm)) : 0;
+  // Dynamic price - use route price directly
+  const dynamicPrice = selectedRide?.routes?.price || 0;
 
   const isRideFull = selectedRide?.available_seats === 0;
-  const isNearbyMode = pickupMode === 'nearby' || dropoffMode === 'nearby';
 
   // Payment file handler
   const handlePaymentFile = (e: React.ChangeEvent<HTMLInputElement>) => {
