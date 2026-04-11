@@ -12,7 +12,7 @@ import MapView from '@/components/MapView';
 import {
   ChevronLeft, Route, Users, Car, Ticket, BarChart3, Plus, Edit, Trash2,
   CheckCircle2, XCircle, MapPin, Clock, Search, Globe, LogOut, Shield,
-  Loader2, Eye, Database, Settings, Phone, Package
+  Loader2, Eye, Database, Settings, Phone, Package, ListOrdered
 } from 'lucide-react';
 
 type AdminTab = 'routes' | 'drivers' | 'shuttles' | 'bookings' | 'analytics' | 'approvals' | 'settings' | 'carpool' | 'users' | 'route_requests';
@@ -47,6 +47,12 @@ const AdminPanel = () => {
   const [allProfiles, setAllProfiles] = useState<any[]>([]);
   const [routeRequests, setRouteRequests] = useState<any[]>([]);
   const [routeRequestProfiles, setRouteRequestProfiles] = useState<Record<string, any>>({});
+
+  // Stops management
+  const [expandedRouteStops, setExpandedRouteStops] = useState<string | null>(null);
+  const [routeStopsMap, setRouteStopsMap] = useState<Record<string, any[]>>({});
+  const [stopForm, setStopForm] = useState({ name_en: '', name_ar: '', lat: 0, lng: 0, stop_type: 'both', stop_order: 0 });
+  const [addingStop, setAddingStop] = useState(false);
 
   // Route form
   const [showRouteForm, setShowRouteForm] = useState(false);
@@ -222,6 +228,53 @@ const AdminPanel = () => {
     fetchAllData();
     toast.success('Route deactivated');
   };
+
+  // --- Stops management ---
+  const fetchStopsForRoute = async (routeId: string) => {
+    const { data } = await supabase.from('stops').select('*').eq('route_id', routeId).order('stop_order');
+    setRouteStopsMap(prev => ({ ...prev, [routeId]: data || [] }));
+  };
+
+  const toggleRouteStops = async (routeId: string) => {
+    if (expandedRouteStops === routeId) {
+      setExpandedRouteStops(null);
+      return;
+    }
+    setExpandedRouteStops(routeId);
+    setStopForm({ name_en: '', name_ar: '', lat: 0, lng: 0, stop_type: 'both', stop_order: (routeStopsMap[routeId]?.length || 0) });
+    if (!routeStopsMap[routeId]) await fetchStopsForRoute(routeId);
+  };
+
+  const addStop = async (routeId: string) => {
+    if (!stopForm.name_en || !stopForm.name_ar) return;
+    setAddingStop(true);
+    const { error } = await supabase.from('stops').insert({
+      route_id: routeId,
+      name_en: stopForm.name_en,
+      name_ar: stopForm.name_ar,
+      lat: stopForm.lat,
+      lng: stopForm.lng,
+      stop_type: stopForm.stop_type,
+      stop_order: stopForm.stop_order,
+    });
+    if (error) toast.error(error.message);
+    else {
+      toast.success(lang === 'ar' ? 'تمت إضافة نقطة التوقف' : 'Stop added');
+      setStopForm({ name_en: '', name_ar: '', lat: 0, lng: 0, stop_type: 'both', stop_order: (routeStopsMap[routeId]?.length || 0) + 1 });
+      await fetchStopsForRoute(routeId);
+    }
+    setAddingStop(false);
+  };
+
+  const deleteStop = async (stopId: string, routeId: string) => {
+    const { error } = await supabase.from('stops').delete().eq('id', stopId);
+    if (error) toast.error(error.message);
+    else {
+      toast.success(lang === 'ar' ? 'تم حذف نقطة التوقف' : 'Stop deleted');
+      await fetchStopsForRoute(routeId);
+    }
+  };
+
 
   const seedTestData = async () => {
     try {
@@ -577,9 +630,13 @@ const AdminPanel = () => {
                   <span>{route.price} EGP</span>
                   <span><Clock className="w-3 h-3 inline me-1" />{route.estimated_duration_minutes} min</span>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   <Button size="sm" variant="outline" onClick={() => startEditRoute(route)}>
                     <Edit className="w-3.5 h-3.5 me-1" />{lang === 'ar' ? 'تعديل' : 'Edit'}
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => toggleRouteStops(route.id)}>
+                    <ListOrdered className="w-3.5 h-3.5 me-1" />
+                    {lang === 'ar' ? 'نقاط التوقف' : 'Stops'} ({routeStopsMap[route.id]?.length || '...'})
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => toggleRouteStatus(route.id, route.status)}>
                     {route.status === 'active' ? (lang === 'ar' ? 'تعطيل' : 'Deactivate') : (lang === 'ar' ? 'تفعيل' : 'Activate')}
@@ -594,6 +651,90 @@ const AdminPanel = () => {
                     <Trash2 className="w-3.5 h-3.5 me-1" />{lang === 'ar' ? 'حذف' : 'Delete'}
                   </Button>
                 </div>
+
+                {/* Stops management panel */}
+                {expandedRouteStops === route.id && (
+                  <div className="mt-4 border-t border-border pt-4 space-y-4">
+                    <h4 className="font-semibold text-foreground text-sm flex items-center gap-2">
+                      <ListOrdered className="w-4 h-4 text-primary" />
+                      {lang === 'ar' ? 'نقاط التوقف' : 'Bus Stops'}
+                    </h4>
+
+                    {/* Existing stops */}
+                    {(routeStopsMap[route.id] || []).length > 0 ? (
+                      <div className="space-y-2">
+                        {(routeStopsMap[route.id] || []).map((stop: any, idx: number) => (
+                          <div key={stop.id} className="flex items-center justify-between bg-surface rounded-lg px-3 py-2 text-sm">
+                            <div className="flex items-center gap-2">
+                              <span className="w-6 h-6 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-bold">{idx + 1}</span>
+                              <div>
+                                <p className="font-medium text-foreground">{lang === 'ar' ? stop.name_ar : stop.name_en}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {stop.stop_type === 'both' ? '↕ Pickup & Dropoff' : stop.stop_type === 'pickup' ? '🟢 Pickup only' : '🔴 Dropoff only'}
+                                  {' · '}{stop.lat.toFixed(4)}, {stop.lng.toFixed(4)}
+                                </p>
+                              </div>
+                            </div>
+                            <Button size="sm" variant="ghost" className="text-destructive h-7 w-7 p-0" onClick={() => deleteStop(stop.id, route.id)}>
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">{lang === 'ar' ? 'لا توجد نقاط توقف بعد' : 'No stops yet. Add stops below.'}</p>
+                    )}
+
+                    {/* Add stop form */}
+                    <div className="bg-surface rounded-xl p-4 space-y-3 border border-border">
+                      <p className="text-sm font-medium text-foreground">{lang === 'ar' ? 'إضافة نقطة توقف' : 'Add New Stop'}</p>
+                      <div className="grid sm:grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-xs">Name (EN)</Label>
+                          <Input value={stopForm.name_en} onChange={e => setStopForm(p => ({ ...p, name_en: e.target.value }))} placeholder="e.g. Gate 3" className="h-9 text-sm" />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Name (AR)</Label>
+                          <Input value={stopForm.name_ar} onChange={e => setStopForm(p => ({ ...p, name_ar: e.target.value }))} placeholder="بوابة 3" className="h-9 text-sm" />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">{lang === 'ar' ? 'النوع' : 'Type'}</Label>
+                          <select value={stopForm.stop_type} onChange={e => setStopForm(p => ({ ...p, stop_type: e.target.value }))}
+                            className="w-full h-9 rounded-md border border-border bg-card px-3 text-sm text-foreground">
+                            <option value="both">↕ Pickup & Dropoff</option>
+                            <option value="pickup">🟢 Pickup only</option>
+                            <option value="dropoff">🔴 Dropoff only</option>
+                          </select>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">{lang === 'ar' ? 'الترتيب' : 'Order'}</Label>
+                          <Input type="number" value={stopForm.stop_order} onChange={e => setStopForm(p => ({ ...p, stop_order: parseInt(e.target.value) || 0 }))} className="h-9 text-sm" />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs flex items-center gap-1"><MapPin className="w-3 h-3" /> {lang === 'ar' ? 'الموقع (انقر على الخريطة)' : 'Location (click on map)'}</Label>
+                        <MapView
+                          className="h-[180px] rounded-lg overflow-hidden"
+                          center={{ lat: stopForm.lat || route.origin_lat, lng: stopForm.lng || route.origin_lng }}
+                          zoom={13}
+                          markers={[
+                            { lat: route.origin_lat, lng: route.origin_lng, label: 'A', color: 'green' },
+                            { lat: route.destination_lat, lng: route.destination_lng, label: 'B', color: 'red' },
+                            ...(stopForm.lat ? [{ lat: stopForm.lat, lng: stopForm.lng, label: '📍', color: 'blue' as const }] : []),
+                            ...(routeStopsMap[route.id] || []).map((s: any, i: number) => ({ lat: s.lat, lng: s.lng, label: (i + 1).toString(), color: 'blue' as const })),
+                          ]}
+                          onMapClick={(lat, lng) => setStopForm(p => ({ ...p, lat: parseFloat(lat.toFixed(6)), lng: parseFloat(lng.toFixed(6)) }))}
+                          showUserLocation={false}
+                        />
+                        {stopForm.lat !== 0 && <p className="text-xs text-muted-foreground">{stopForm.lat.toFixed(4)}, {stopForm.lng.toFixed(4)}</p>}
+                      </div>
+                      <Button size="sm" onClick={() => addStop(route.id)} disabled={!stopForm.name_en || !stopForm.name_ar || stopForm.lat === 0 || addingStop}>
+                        {addingStop ? <Loader2 className="w-3.5 h-3.5 animate-spin me-1" /> : <Plus className="w-3.5 h-3.5 me-1" />}
+                        {lang === 'ar' ? 'إضافة' : 'Add Stop'}
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
