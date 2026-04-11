@@ -184,7 +184,7 @@ const Carpool = () => {
   return (
     <div className="h-screen bg-background flex flex-col overflow-hidden" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
       {/* Header */}
-      <div className="bg-primary text-primary-foreground px-4 pt-12 pb-6">
+      <div className="bg-primary text-primary-foreground px-4 pt-12 pb-6 shrink-0 safe-area-top">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-xl font-bold font-heading">
             {lang === 'ar' ? 'مشاركة الرحلات' : 'Carpooling'}
