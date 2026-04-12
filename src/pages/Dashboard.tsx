@@ -650,7 +650,10 @@ const Dashboard = () => {
   })();
 
   return (
-    <div className="h-screen flex flex-col">
+    <div
+      className="h-[100dvh] flex flex-col overflow-hidden"
+      style={{ paddingBottom: 'calc(4rem + env(safe-area-inset-bottom, 0px))' }}
+    >
       <header className="flex items-center justify-between px-4 py-2 bg-card border-b border-border shrink-0 z-10 safe-area-top">
         <div className="flex items-center gap-2">
           {step !== 'search' && (
@@ -700,7 +703,7 @@ const Dashboard = () => {
         />
       </div>
 
-      <div className="shrink-0 overflow-y-auto bg-card border-t border-border pb-20" style={{ maxHeight: '50vh' }}>
+      <div className="shrink-0 overflow-y-auto bg-card border-t border-border pb-6" style={{ maxHeight: '50dvh' }}>
         {step === 'search' && (
           <div className="p-4 space-y-4">
             <h2 className="text-lg font-bold text-foreground">{lang === 'ar' ? 'إلى أين تريد الذهاب؟' : 'Where are you going?'}</h2>
