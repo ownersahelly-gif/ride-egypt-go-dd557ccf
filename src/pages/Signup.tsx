@@ -296,7 +296,6 @@ const Signup = () => {
   const { t, lang, appName } = useLanguage();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [searchParams] = useSearchParams();
   const [role, setRole] = useState<UserRole | null>(null);
   const [driverStep, setDriverStep] = useState(1);
   const [fullName, setFullName] = useState('');
