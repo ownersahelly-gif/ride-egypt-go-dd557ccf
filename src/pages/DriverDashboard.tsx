@@ -39,7 +39,7 @@ const DriverDashboard = () => {
   const [showAllUpcoming, setShowAllUpcoming] = useState(false);
   const [expandedUpcoming, setExpandedUpcoming] = useState<string | null>(null);
   const [chatPassengerName, setChatPassengerName] = useState<string>('');
-
+  const [deleteConfirmKey, setDeleteConfirmKey] = useState<string | null>(null);
   // Schedule states
   const [allRoutes, setAllRoutes] = useState<any[]>([]);
   const [driverSchedules, setDriverSchedules] = useState<any[]>([]);
@@ -429,6 +429,21 @@ const DriverDashboard = () => {
     if (!user || !shuttle) return;
     setStartingTrip(true);
     try {
+      // Update ride_instance status to 'in_progress' so passengers see live tracking
+      await supabase
+        .from('ride_instances')
+        .update({ status: 'in_progress' })
+        .eq('shuttle_id', shuttle.id)
+        .eq('route_id', slot.routeId)
+        .eq('ride_date', slot.dateStr)
+        .eq('departure_time', slot.time);
+
+      // Update shuttle status to active if not already
+      if (shuttle.status !== 'active') {
+        await supabase.from('shuttles').update({ status: 'active' }).eq('id', shuttle.id);
+        setShuttle({ ...shuttle, status: 'active' });
+      }
+
       // Send push notification to all booked riders
       await supabase.functions.invoke('push-notification', {
         body: {
@@ -444,10 +459,44 @@ const DriverDashboard = () => {
         },
       });
     } catch (e) {
-      console.error('Failed to send trip started notification:', e);
+      console.error('Failed to start trip:', e);
     }
     setStartingTrip(false);
     navigate('/active-ride');
+  };
+
+  const handleDeleteTrip = async (key: string) => {
+    // Check if there are paid bookings for this trip
+    const entry = key.split('__');
+    const tripDate = entry[0];
+    const tripRouteId = entry[1];
+    const tripTime = entry[2];
+
+    const { data: paidBookings } = await supabase
+      .from('bookings')
+      .select('id, status, payment_proof_url')
+      .eq('shuttle_id', shuttle?.id)
+      .eq('scheduled_date', tripDate)
+      .eq('scheduled_time', tripTime)
+      .in('status', ['confirmed', 'pending']);
+
+    const hasPaidBookings = (paidBookings || []).some(b => b.payment_proof_url || b.status === 'confirmed');
+
+    if (hasPaidBookings) {
+      setDeleteConfirmKey(key);
+    } else {
+      // No paid bookings, delete directly
+      const matchSchedule = driverSchedules.find(s => s.route_id === tripRouteId);
+      if (matchSchedule) deleteSchedule(matchSchedule.id);
+    }
+  };
+
+  const confirmDeleteTrip = () => {
+    if (!deleteConfirmKey) return;
+    const tripRouteId = deleteConfirmKey.split('__')[1];
+    const matchSchedule = driverSchedules.find(s => s.route_id === tripRouteId);
+    if (matchSchedule) deleteSchedule(matchSchedule.id);
+    setDeleteConfirmKey(null);
   };
 
   const statusColors: Record<string, string> = {
@@ -1385,14 +1434,10 @@ const DriverDashboard = () => {
                           {isExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
                         </div>
                       </button>
-                      {/* Delete button - only in Trips tab */}
+                      {/* Delete button - only in Trips tab, with warning */}
                       {isUpcoming && (
                         <button
-                          onClick={() => {
-                            // Find matching schedule and delete
-                            const matchSchedule = driverSchedules.find(s => s.route_id === key.split('__')[1]);
-                            if (matchSchedule) deleteSchedule(matchSchedule.id);
-                          }}
+                          onClick={() => handleDeleteTrip(key)}
                           className="px-3 flex items-center justify-center border-s border-border hover:bg-destructive/10 transition-colors text-destructive"
                           title={lang === 'ar' ? 'حذف' : 'Delete'}
                         >
@@ -1407,11 +1452,61 @@ const DriverDashboard = () => {
                       const tripDep = new Date(tripDate + 'T00:00:00');
                       tripDep.setHours(tripH, tripM, 0);
                       const msSinceTripDep = nowMs - tripDep.getTime();
+                      const msUntilTripDep = tripDep.getTime() - nowMs;
                       const tripExpired = msSinceTripDep > 30 * 60 * 1000;
-                      const withinWindow = (tripDep.getTime() - nowMs) <= 2 * 60 * 60 * 1000 && msSinceTripDep <= 30 * 60 * 1000;
-                      const canStartTrip = isTripToday && shuttle?.status === 'active' && activeBookings.length > 0 && withinWindow && !tripExpired;
+                      const withinWindow = msUntilTripDep <= 2 * 60 * 60 * 1000 && msSinceTripDep <= 30 * 60 * 1000;
+                      const canStartTrip = isTripToday && shuttle?.status === 'active' && withinWindow && !tripExpired;
+                      const tooEarly = !tripExpired && msUntilTripDep > 2 * 60 * 60 * 1000;
+
+                      // Format wait time
+                      const getWaitMessage = () => {
+                        if (!isTripToday) {
+                          return lang === 'ar' 
+                            ? `الرحلة ${tripDayLabel} الساعة ${formatTime12h(tripTime, lang)}` 
+                            : `Trip is on ${tripDayLabel} at ${formatTime12h(tripTime, lang)}`;
+                        }
+                        const hoursLeft = Math.floor(msUntilTripDep / 3600000);
+                        const minsLeft = Math.floor((msUntilTripDep % 3600000) / 60000);
+                        if (hoursLeft > 0) {
+                          return lang === 'ar'
+                            ? `يمكنك بدء الرحلة بعد ${hoursLeft} ساعة و ${minsLeft} دقيقة`
+                            : `You can start the trip in ${hoursLeft}h ${minsLeft}m`;
+                        }
+                        return lang === 'ar'
+                          ? `يمكنك بدء الرحلة بعد ${minsLeft} دقيقة`
+                          : `You can start the trip in ${minsLeft}m`;
+                      };
+
                       return (
                       <div className="border-t border-border p-4 space-y-3">
+                        {/* Start Trip Button - always visible */}
+                        {!tripExpired && !tripIsPast && (
+                          <div>
+                            {canStartTrip ? (
+                              <Button
+                                className="w-full h-12 text-base rounded-xl"
+                                size="lg"
+                                onClick={() => startTrip({ scheduleId: key, routeId: key.split('__')[1], dateStr: tripDate, time: tripTime, direction: 'go' })}
+                                disabled={startingTrip}
+                              >
+                                {startingTrip ? <Loader2 className="w-5 h-5 animate-spin me-2" /> : <Play className="w-5 h-5 me-2" />}
+                                {lang === 'ar' ? 'ابدأ الرحلة الآن' : 'Start This Trip'}
+                              </Button>
+                            ) : (
+                              <div>
+                                <Button className="w-full h-12 text-base rounded-xl opacity-50" size="lg" disabled>
+                                  <Play className="w-5 h-5 me-2" />
+                                  {lang === 'ar' ? 'ابدأ الرحلة' : 'Start Trip'}
+                                </Button>
+                                <p className="text-xs text-muted-foreground text-center mt-2 flex items-center justify-center gap-1">
+                                  <Clock className="w-3.5 h-3.5" />
+                                  {getWaitMessage()}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
                         {tripExpired && isTripToday && (
                           <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-3 flex items-start gap-2">
                             <AlertCircle className="w-4 h-4 text-destructive mt-0.5 shrink-0" />
@@ -1420,14 +1515,7 @@ const DriverDashboard = () => {
                             </p>
                           </div>
                         )}
-                        {canStartTrip && (
-                          <Link to="/active-ride">
-                            <Button className="w-full h-12 text-base rounded-xl mb-2" size="lg">
-                              <Play className="w-5 h-5 me-2" />
-                              {lang === 'ar' ? 'ابدأ الرحلة الآن' : 'Start This Trip'}
-                            </Button>
-                          </Link>
-                        )}
+
                         {!tripExpired && !tripIsPast && activeBookings.length === 0 && (
                           <div className="bg-muted/50 rounded-xl p-3 flex items-center gap-2">
                             <Users className="w-4 h-4 text-muted-foreground" />
@@ -1552,6 +1640,35 @@ const DriverDashboard = () => {
           </>
         )}
       </div>
+
+      {/* Delete confirmation dialog */}
+      {deleteConfirmKey && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setDeleteConfirmKey(null)}>
+          <div className="bg-card rounded-2xl p-6 max-w-sm w-full space-y-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-6 h-6 text-destructive shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-semibold text-foreground">
+                  {lang === 'ar' ? 'تحذير: ركاب دفعوا لهذه الرحلة' : 'Warning: Passengers have paid for this trip'}
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {lang === 'ar'
+                    ? 'هناك ركاب حجزوا ودفعوا لهذه الرحلة. حذفها سيؤدي لإلغاء حجوزاتهم. هل أنت متأكد؟'
+                    : 'There are passengers who booked and paid for this trip. Deleting it will cancel their bookings. Are you sure?'}
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="destructive" className="flex-1" onClick={confirmDeleteTrip}>
+                {lang === 'ar' ? 'نعم، احذف' : 'Yes, Delete'}
+              </Button>
+              <Button variant="outline" className="flex-1" onClick={() => setDeleteConfirmKey(null)}>
+                {lang === 'ar' ? 'إلغاء' : 'Cancel'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
