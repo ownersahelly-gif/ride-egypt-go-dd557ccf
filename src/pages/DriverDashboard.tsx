@@ -699,12 +699,12 @@ const DriverDashboard = () => {
                         const isAdHoc = slot.scheduleId.startsWith('adhoc_');
                         const isTestTrip = !!firstTodayTrip && firstTodayTrip.scheduleId === slot.scheduleId && firstTodayTrip.direction === slot.direction;
 
-                        // Time gate: can only start within 2 hours before departure (and up to 4h after for past trips)
+                        // Time gate: can only start within 2 hours before departure
                         const [slotH, slotM] = slot.time.split(':').map(Number);
                         const slotDate = new Date(slot.dateStr + 'T00:00:00');
                         slotDate.setHours(slotH, slotM, 0);
                         const msUntilDeparture = slotDate.getTime() - Date.now();
-                        const withinTwoHours = msUntilDeparture <= 2 * 60 * 60 * 1000 && msUntilDeparture >= -4 * 60 * 60 * 1000;
+                        const withinTwoHours = msUntilDeparture <= 2 * 60 * 60 * 1000 && msUntilDeparture > 0;
 
                         // Find schedule's min_passengers
                         const scheduleEntry = driverSchedules.find(s => s.id === slot.scheduleId);
@@ -724,8 +724,8 @@ const DriverDashboard = () => {
 
                         return (
                           <div key={key} className={`bg-card border rounded-2xl overflow-hidden transition-all ${
-                            slot.direction === 'go' ? 'border-green-200' : 'border-blue-200'
-                          } ${slot.isPast && !canStart ? 'opacity-50' : ''}`}>
+                            slot.isPast ? 'border-border' : slot.direction === 'go' ? 'border-green-200' : 'border-blue-200'
+                          }`}>
                             <div className="flex items-stretch">
                               <button
                                 onClick={() => setExpandedUpcoming(isExpanded ? null : key)}
@@ -734,20 +734,22 @@ const DriverDashboard = () => {
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold ${
-                                    slot.direction === 'go' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+                                    slot.isPast ? 'bg-muted text-muted-foreground' : slot.direction === 'go' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
                                   }`}>
-                                    {lang === 'ar' ? '←' : '→'}
+                                    {slot.isPast ? '✓' : lang === 'ar' ? '←' : '→'}
                                   </div>
                                   <div>
                                     <div className="flex items-center gap-2">
                                       <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
-                                        slot.direction === 'go' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+                                        slot.isPast ? 'bg-muted text-muted-foreground' : slot.direction === 'go' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
                                       }`}>
-                                        {slot.direction === 'go' ? (lang === 'ar' ? 'ذهاب' : 'Going') : (lang === 'ar' ? 'عودة' : 'Returning')}
+                                        {slot.isPast
+                                          ? (lang === 'ar' ? 'انتهت' : 'Passed')
+                                          : slot.direction === 'go' ? (lang === 'ar' ? 'ذهاب' : 'Going') : (lang === 'ar' ? 'عودة' : 'Returning')}
                                       </span>
                                       <span className="text-xs text-muted-foreground">{getDayLabel(slot.dayOffset, slot.day)}</span>
                                     </div>
-                                    <p className="text-sm font-medium text-foreground mt-0.5">
+                                    <p className={`text-sm font-medium mt-0.5 ${slot.isPast ? 'text-muted-foreground' : 'text-foreground'}`}>
                                       {slot.direction === 'go'
                                         ? `${displayOrigin} ${lang === 'ar' ? '←' : '→'} ${displayDest}`
                                         : `${displayDest} ${lang === 'ar' ? '←' : '→'} ${displayOrigin}`}
@@ -757,7 +759,7 @@ const DriverDashboard = () => {
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <div className="text-end">
-                                    <p className="text-lg font-bold text-foreground">{slot.time}</p>
+                                    <p className={`text-lg font-bold ${slot.isPast ? 'text-muted-foreground' : 'text-foreground'}`}>{slot.time}</p>
                                   </div>
                                   {isExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
                                 </div>
