@@ -26,6 +26,7 @@ import CarpoolPost from "./pages/CarpoolPost.tsx";
 import CarpoolRoute from "./pages/CarpoolRoute.tsx";
 import CarpoolManage from "./pages/CarpoolManage.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import GlobalNotifications from "./components/GlobalNotifications";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +35,7 @@ const App = () => (
     <LanguageProvider>
       <AuthProvider>
         <TooltipProvider>
+          <GlobalNotifications />
           <Toaster />
           <Sonner />
           <BrowserRouter>
