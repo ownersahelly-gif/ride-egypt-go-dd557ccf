@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
+import { formatTime12h } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -449,7 +450,7 @@ const Carpool = () => {
                           <div className="flex items-center flex-wrap gap-3 text-xs text-muted-foreground">
                             <span className="flex items-center gap-1">
                               <Clock className="w-3 h-3" />
-                              {route.departure_time?.slice(0, 5)}
+                              {formatTime12h(route.departure_time, lang)}
                             </span>
                             <span className="flex items-center gap-1">
                               <Users className="w-3 h-3" />
@@ -554,7 +555,7 @@ const Carpool = () => {
                     <div className="flex items-center justify-between mb-2">
                       <div>
                         <p className="font-medium text-sm">{route.origin_name} → {route.destination_name}</p>
-                        <p className="text-xs text-muted-foreground">{route.departure_time?.slice(0, 5)}</p>
+                        <p className="text-xs text-muted-foreground">{formatTime12h(route.departure_time, lang)}</p>
                       </div>
                       <Badge variant={route.status === 'active' ? 'default' : 'secondary'}>
                         {route.status === 'active' ? (lang === 'ar' ? 'نشط' : 'Active') : (lang === 'ar' ? 'متوقف' : 'Paused')}
