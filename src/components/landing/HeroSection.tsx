@@ -1,11 +1,19 @@
 import { Link } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAppSettings } from '@/hooks/useAppSettings';
 import { Button } from '@/components/ui/button';
 import { MapPin, ArrowRight, ArrowLeft, Users, Route, Building2 } from 'lucide-react';
 
 const HeroSection = () => {
   const { t, lang } = useLanguage();
+  const { settings } = useAppSettings();
   const Arrow = lang === 'ar' ? ArrowLeft : ArrowRight;
+
+  // Use admin-configured text if available, otherwise fall back to translations
+  const heroTitle = (lang === 'ar' ? settings.hero_title_ar : settings.hero_title_en) || t('hero.title');
+  const heroHighlight = (lang === 'ar' ? settings.hero_title_highlight_ar : settings.hero_title_highlight_en) || t('hero.titleHighlight');
+  const heroSubtitle = (lang === 'ar' ? settings.hero_subtitle_ar : settings.hero_subtitle_en) || t('hero.subtitle');
+  const heroTagline = (lang === 'ar' ? settings.hero_tagline_ar : settings.hero_tagline_en) || t('hero.tagline');
 
   const stats = [
     { icon: Users, value: '50K+', label: t('hero.riders') },
@@ -23,17 +31,17 @@ const HeroSection = () => {
         <div className="max-w-3xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-secondary/10 text-secondary font-medium text-sm mb-8">
             <MapPin className="w-4 h-4" />
-            {t('hero.tagline')}
+            {heroTagline}
           </div>
 
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-tight tracking-tight text-foreground mb-6">
-            {t('hero.title')}
+            {heroTitle}
             <br />
-            <span className="text-gradient">{t('hero.titleHighlight')}</span>
+            <span className="text-gradient">{heroHighlight}</span>
           </h1>
 
           <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
-            {t('hero.subtitle')}
+            {heroSubtitle}
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
