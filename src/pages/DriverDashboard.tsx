@@ -39,7 +39,7 @@ const DriverDashboard = () => {
   const [showAllUpcoming, setShowAllUpcoming] = useState(false);
   const [expandedUpcoming, setExpandedUpcoming] = useState<string | null>(null);
   const [chatPassengerName, setChatPassengerName] = useState<string>('');
-
+  const [deleteConfirmKey, setDeleteConfirmKey] = useState<string | null>(null);
   // Schedule states
   const [allRoutes, setAllRoutes] = useState<any[]>([]);
   const [driverSchedules, setDriverSchedules] = useState<any[]>([]);
