@@ -498,12 +498,40 @@ const DriverDashboard = () => {
     }
   };
 
-  const confirmDeleteTrip = () => {
+  const confirmDeleteTrip = async () => {
     if (!deleteConfirmKey) return;
-    const tripRouteId = deleteConfirmKey.split('__')[1];
+    const parts = deleteConfirmKey.split('__');
+    const tripDate = parts[0];
+    const tripRouteId = parts[1];
+    const tripTime = parts[2];
+
+    // Cancel all bookings for this trip and create refunds for paid ones
+    const { data: tripBookings } = await supabase
+      .from('bookings')
+      .select('id, user_id, total_price, payment_proof_url, status')
+      .eq('shuttle_id', shuttle?.id)
+      .eq('scheduled_date', tripDate)
+      .eq('scheduled_time', tripTime)
+      .in('status', ['confirmed', 'pending']);
+
+    for (const b of (tripBookings || [])) {
+      await supabase.from('bookings').update({ status: 'cancelled' }).eq('id', b.id);
+      if (b.payment_proof_url || b.status === 'confirmed') {
+        await supabase.from('refunds').insert({
+          booking_id: b.id,
+          user_id: b.user_id,
+          amount: Number(b.total_price || 0),
+          reason: lang === 'ar' ? 'ألغى السائق الرحلة' : 'Driver cancelled the trip',
+          status: 'pending',
+          refund_type: 'pending',
+        });
+      }
+    }
+
     const matchSchedule = driverSchedules.find(s => s.route_id === tripRouteId);
     if (matchSchedule) deleteSchedule(matchSchedule.id);
     setDeleteConfirmKey(null);
+    toast({ title: lang === 'ar' ? 'تم حذف الرحلة وإلغاء الحجوزات' : 'Trip deleted and bookings cancelled' });
   };
 
   const statusColors: Record<string, string> = {
