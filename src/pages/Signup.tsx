@@ -677,11 +677,21 @@ const Signup = () => {
               </Label>
             </div>
 
-            {referralCode && (
-              <p className="text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">
-                {lang === 'ar' ? `كود الإحالة: ${referralCode}` : `Referral code: ${referralCode}`}
-              </p>
-            )}
+            {/* Referral Code Input */}
+            <div className="space-y-2">
+              <Label>{lang === 'ar' ? 'كود الإحالة (اختياري)' : 'Referral Code (optional)'}</Label>
+              <Input
+                placeholder={lang === 'ar' ? 'أدخل كود الإحالة المكون من 6 أرقام' : 'Enter 6-digit referral code'}
+                value={referralCode}
+                onChange={(e) => setReferralCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                maxLength={6}
+                inputMode="numeric"
+                className="text-center tracking-[0.3em] text-lg font-bold"
+              />
+              {referralCode.length === 6 && (
+                <p className="text-xs text-green-600 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> {lang === 'ar' ? 'سيتم ربط حسابك بالشركة' : 'Your account will be linked to the partner'}</p>
+              )}
+            </div>
 
             <Button type="submit" className="w-full gap-2" size="lg" disabled={loading || !acceptedTerms}>
               {loading ? (lang === 'ar' ? 'جاري التسجيل...' : 'Creating account...') : t('auth.signup')}
