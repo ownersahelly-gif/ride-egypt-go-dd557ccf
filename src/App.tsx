@@ -41,6 +41,7 @@ const App = () => (
               <Route path="/signup" element={<Signup />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/book" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/book-ride" element={<BookRide />} />
               <Route path="/my-bookings" element={<ProtectedRoute><MyBookings /></ProtectedRoute>} />
               <Route path="/request-route" element={<ProtectedRoute><RequestRoute /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />

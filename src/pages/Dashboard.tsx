@@ -656,15 +656,6 @@ const Dashboard = () => {
     >
       <header className="flex items-center justify-between px-4 py-2 bg-card border-b border-border shrink-0 z-10 safe-area-top">
         <div className="flex items-center gap-2">
-          {step !== 'search' && (
-            <Button variant="ghost" size="sm" className="rounded-full gap-1" onClick={() => {
-              if (step === 'details') { setStep('results'); setSelectedRide(null); setRouteDirections(null); setSelectedPickupStop(null); setSelectedDropoffStop(null); }
-              else { setStep('search'); setRideInstances([]); }
-            }}>
-              <Back className="w-5 h-5" />
-              <span className="text-sm">{lang === 'ar' ? 'رجوع' : 'Back'}</span>
-            </Button>
-          )}
           <Link to="/" className="text-xl font-bold text-primary font-arabic">
             {lang === 'ar' ? 'مسار' : 'Massar'}
           </Link>
@@ -706,7 +697,15 @@ const Dashboard = () => {
       <div className="shrink-0 overflow-y-auto bg-card border-t border-border pb-6" style={{ maxHeight: '50dvh' }}>
         {step === 'search' && (
           <div className="p-4 space-y-4">
-            <h2 className="text-lg font-bold text-foreground">{lang === 'ar' ? 'إلى أين تريد الذهاب؟' : 'Where are you going?'}</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold text-foreground">{lang === 'ar' ? 'إلى أين تريد الذهاب؟' : 'Where are you going?'}</h2>
+              <Link to="/book-ride">
+                <Button variant="outline" size="sm" className="rounded-xl text-xs gap-1">
+                  <ListOrdered className="w-3.5 h-3.5" />
+                  {lang === 'ar' ? 'الرحلات المتاحة' : 'Available Routes'}
+                </Button>
+              </Link>
+            </div>
             <div className="space-y-2">
               <PlacesAutocomplete placeholder={lang === 'ar' ? 'من أين؟ (نقطة الركوب)' : 'From where? (Pickup)'} onSelect={(place) => setPickup(place)} value={pickup?.name || ''} iconColor="text-green-500" />
               <PlacesAutocomplete placeholder={lang === 'ar' ? 'إلى أين؟ (نقطة النزول)' : 'To where? (Dropoff)'} onSelect={(place) => setDropoff(place)} value={dropoff?.name || ''} iconColor="text-destructive" />
@@ -769,13 +768,23 @@ const Dashboard = () => {
                 ))}
               </div>
             ) : (
-              <div className="p-8 text-center">
+              <div className="p-8 text-center space-y-3">
                 <Calendar className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
-                <p className="text-muted-foreground text-sm mb-3">{lang === 'ar' ? 'لا توجد رحلات متاحة لهذا المسار' : 'No rides available for this route'}</p>
+                <p className="text-muted-foreground text-sm">{lang === 'ar' ? 'لا توجد رحلات متاحة لهذا المسار' : 'No rides available for this route'}</p>
                 <Button size="sm" onClick={() => {
                   if (!user) { navigate('/login'); return; }
                   navigate('/request-route', { state: { origin: pickup ? { name: pickup.name || '', lat: pickup.lat, lng: pickup.lng } : undefined, destination: dropoff ? { name: dropoff.name || '', lat: dropoff.lat, lng: dropoff.lng } : undefined } });
                 }}>{lang === 'ar' ? 'اطلب هذا المسار' : 'Request this route'}</Button>
+                <Link to="/book-ride">
+                  <Button variant="outline" size="sm" className="w-full mt-2 gap-1">
+                    <ListOrdered className="w-3.5 h-3.5" />
+                    {lang === 'ar' ? 'عرض جميع الرحلات المتاحة' : 'See all available routes'}
+                  </Button>
+                </Link>
+                <Button variant="ghost" size="sm" className="w-full gap-1" onClick={() => { setStep('search'); setRideInstances([]); }}>
+                  <Back className="w-4 h-4" />
+                  {lang === 'ar' ? 'رجوع' : 'Go back'}
+                </Button>
               </div>
             )}
           </div>
