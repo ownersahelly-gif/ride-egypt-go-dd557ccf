@@ -564,13 +564,13 @@ const DriverDashboard = () => {
                     const adHocMap = new Map<string, { time: string; direction: 'go' | 'back'; routeId: string }>();
                     todayBookings.forEach(b => {
                       const dir = b.trip_direction === 'return' ? 'back' : 'go';
-                      const timeKey = `${b.scheduled_time?.slice(0, 5)}_${dir}`;
+                      const timeKey = `${formatTime12h(b.scheduled_time, lang)}_${dir}`;
                       if (!adHocMap.has(timeKey)) {
                         adHocMap.set(timeKey, { time: b.scheduled_time?.slice(0, 5), direction: dir, routeId: b.route_id });
                       }
                       // Also add return slot for 'both' trips
                       if (b.trip_direction === 'both') {
-                        const returnKey = `${b.scheduled_time?.slice(0, 5)}_back`;
+                        const returnKey = `${formatTime12h(b.scheduled_time, lang)}_back`;
                         if (!adHocMap.has(returnKey)) {
                           adHocMap.set(returnKey, { time: b.scheduled_time?.slice(0, 5), direction: 'back', routeId: b.route_id });
                         }
@@ -760,7 +760,7 @@ const DriverDashboard = () => {
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <div className="text-end">
-                                    <p className={`text-lg font-bold ${slot.isPast ? 'text-muted-foreground' : 'text-foreground'}`}>{slot.time}</p>
+                                    <p className={`text-lg font-bold ${slot.isPast ? 'text-muted-foreground' : 'text-foreground'}`}>{formatTime12h(slot.time, lang)}</p>
                                   </div>
                                   {isExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
                                 </div>
@@ -795,8 +795,8 @@ const DriverDashboard = () => {
                                     <Clock className="w-4 h-4 text-muted-foreground" />
                                     <p className="text-sm text-muted-foreground">
                                       {lang === 'ar'
-                                        ? `ستبدأ هذه الرحلة ${getDayLabel(slot.dayOffset, slot.day)} الساعة ${slot.time}`
-                                        : `This trip starts ${getDayLabel(slot.dayOffset, slot.day)} at ${slot.time}`}
+                                        ? `ستبدأ هذه الرحلة ${getDayLabel(slot.dayOffset, slot.day)} الساعة ${formatTime12h(slot.time, lang)}`
+                                        : `This trip starts ${getDayLabel(slot.dayOffset, slot.day)} at ${formatTime12h(slot.time, lang)}`}
                                     </p>
                                   </div>
                                 )}
@@ -900,7 +900,7 @@ const DriverDashboard = () => {
                                               <p className="text-xs font-medium text-foreground">{name}</p>
                                               <p className="text-[10px] text-muted-foreground">
                                                 {b.custom_pickup_name && <><MapPin className="w-3 h-3 inline text-green-500" /> {b.custom_pickup_name} · </>}
-                                                {b.seats} {t('booking.seat')} · {b.scheduled_time?.slice(0, 5)}
+                                                {b.seats} {t('booking.seat')} · {formatTime12h(b.scheduled_time, lang)}
                                               </p>
                                             </div>
                                           </div>
@@ -1059,8 +1059,8 @@ const DriverDashboard = () => {
                                 <div className="flex items-center gap-2 text-sm">
                                   <span className="font-medium text-foreground w-16">{dayNames[s.day_of_week]}</span>
                                   <Clock className="w-3.5 h-3.5 text-muted-foreground" />
-                                  <span className="text-muted-foreground">{s.departure_time?.slice(0, 5)}</span>
-                                  {s.return_time && <><ArrowRight className="w-3 h-3 text-muted-foreground" /><span className="text-muted-foreground">{s.return_time?.slice(0, 5)}</span></>}
+                                  <span className="text-muted-foreground">{formatTime12h(s.departure_time, lang)}</span>
+                                  {s.return_time && <><ArrowRight className="w-3 h-3 text-muted-foreground" /><span className="text-muted-foreground">{formatTime12h(s.return_time, lang)}</span></>}
                                 </div>
                                 <button onClick={() => deleteSchedule(s.id)} className="text-destructive/60 hover:text-destructive p-1"><Trash2 className="w-4 h-4" /></button>
                               </div>
@@ -1142,7 +1142,7 @@ const DriverDashboard = () => {
                               <option value="go">{lang === 'ar' ? '→ ذهاب' : '→ Going'}</option>
                               <option value="return">{lang === 'ar' ? '← عودة' : '← Return'}</option>
                             </select>
-                            <Input type="time" value={slot.time} className="flex-1"
+                            <Input type="time" value={formatTime12h(slot.time, lang)} className="flex-1"
                               onChange={e => {
                                 const updated = [...scheduleForm.timeSlots];
                                 updated[idx] = { ...updated[idx], time: e.target.value };
@@ -1303,7 +1303,7 @@ const DriverDashboard = () => {
                             <p className="font-semibold text-foreground text-sm">{lang === 'ar' ? routeObj?.name_ar : routeObj?.name_en}</p>
                             <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
                               <span>{first.scheduled_date}</span>
-                              <span>{first.scheduled_time?.slice(0, 5)}</span>
+                              <span>{formatTime12h(first.scheduled_time, lang)}</span>
                               <span>{activeBookings.filter((b: any) => b.trip_direction === 'go' || b.trip_direction === 'both').length} {lang === 'ar' ? 'ذهاب' : 'go'}</span>
                               <span>{activeBookings.filter((b: any) => b.trip_direction === 'return' || b.trip_direction === 'both').length} {lang === 'ar' ? 'عودة' : 'back'}</span>
                             </div>

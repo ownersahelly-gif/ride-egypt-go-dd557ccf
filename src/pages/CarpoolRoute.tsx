@@ -198,7 +198,7 @@ const CarpoolRoute = () => {
               <p className="font-medium">{route.destination_name}</p>
             </div>
             <div className="flex flex-wrap gap-3 pt-2 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1"><Clock className="w-4 h-4" />{route.departure_time?.slice(0, 5)}</span>
+              <span className="flex items-center gap-1"><Clock className="w-4 h-4" />{formatTime12h(route.departure_time, lang)}</span>
               <span className="flex items-center gap-1"><Users className="w-4 h-4" />{route.available_seats} {lang === 'ar' ? 'مقاعد' : 'seats'}</span>
             </div>
             <div className="flex flex-wrap gap-2">

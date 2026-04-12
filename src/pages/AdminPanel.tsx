@@ -1065,7 +1065,7 @@ const AdminPanel = () => {
                           <p className="text-sm text-muted-foreground">{b.profile?.phone || 'No phone'}</p>
                           <p className="text-sm font-medium text-foreground">{lang === 'ar' ? b.routes?.name_ar : b.routes?.name_en}</p>
                           <p className="text-xs text-muted-foreground">
-                            {b.scheduled_date} · {b.scheduled_time?.slice(0, 5)} · {b.seats} {lang === 'ar' ? 'مقعد' : 'seat(s)'} · {b.total_price} EGP
+                            {b.scheduled_date} · {formatTime12h(b.scheduled_time, lang)} · {b.seats} {lang === 'ar' ? 'مقعد' : 'seat(s)'} · {b.total_price} EGP
                           </p>
                           {b.custom_pickup_name && (
                             <p className="text-xs text-muted-foreground">
@@ -1134,7 +1134,7 @@ const AdminPanel = () => {
                           <p className="font-medium text-foreground text-sm">{b.profile?.full_name || 'Unknown'}</p>
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          {lang === 'ar' ? b.routes?.name_ar : b.routes?.name_en} · {b.scheduled_date} · {b.scheduled_time?.slice(0, 5)}
+                          {lang === 'ar' ? b.routes?.name_ar : b.routes?.name_en} · {b.scheduled_date} · {formatTime12h(b.scheduled_time, lang)}
                         </p>
                       </div>
                       <Button size="sm" variant="outline" onClick={() => promoteWaitlist(b.id)}>

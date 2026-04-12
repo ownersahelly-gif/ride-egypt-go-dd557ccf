@@ -810,7 +810,7 @@ const BookRide = () => {
                       </div>
                       <div className="flex items-center gap-4 mt-3 text-sm">
                         <span className="flex items-center gap-1 text-muted-foreground">
-                          <Clock className="w-3.5 h-3.5" />{ride.departure_time?.slice(0, 5)}
+                          <Clock className="w-3.5 h-3.5" />{formatTime12h(ride.departure_time, lang)}
                         </span>
                         <span className="flex items-center gap-1 text-muted-foreground">
                           <Clock className="w-3.5 h-3.5" />{ride.routes?.estimated_duration_minutes} {t('booking.min')}
@@ -881,7 +881,7 @@ const BookRide = () => {
                   <p className="text-xs text-muted-foreground">{lang === 'ar' ? 'للراكب' : 'per person'}</p>
                 </div>
                 <div className="bg-surface rounded-xl p-3 text-center">
-                  <p className="text-xl font-bold text-foreground">{selectedRide.departure_time?.slice(0, 5)}</p>
+                  <p className="text-xl font-bold text-foreground">{formatTime12h(selectedRide.departure_time, lang)}</p>
                   <p className="text-xs text-muted-foreground">{lang === 'ar' ? 'الانطلاق' : 'Departure'}</p>
                 </div>
                 <div className="bg-surface rounded-xl p-3 text-center">
@@ -1212,7 +1212,7 @@ const BookRide = () => {
                 </div>
                 <div className="bg-surface rounded-xl p-3 text-center">
                   <Clock className="w-4 h-4 mx-auto text-muted-foreground mb-1" />
-                  <p className="text-sm font-medium text-foreground">{selectedRide.departure_time?.slice(0, 5)}</p>
+                  <p className="text-sm font-medium text-foreground">{formatTime12h(selectedRide.departure_time, lang)}</p>
                 </div>
               </div>
 
