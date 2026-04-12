@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import BottomNav from '@/components/BottomNav';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,25 +8,57 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { ChevronLeft, ChevronRight, User } from 'lucide-react';
+import { ChevronLeft, ChevronRight, User, Camera, Loader2 } from 'lucide-react';
 
 const Profile = () => {
   const { user } = useAuth();
   const { t, lang } = useLanguage();
   const { toast } = useToast();
   const Back = lang === 'ar' ? ChevronRight : ChevronLeft;
+  const photoRef = useRef<HTMLInputElement>(null);
 
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!user) return;
     supabase.from('profiles').select('*').eq('user_id', user.id).single()
       .then(({ data }) => {
-        if (data) { setFullName(data.full_name || ''); setPhone(data.phone || ''); }
+        if (data) {
+          setFullName(data.full_name || '');
+          setPhone(data.phone || '');
+          setAvatarUrl(data.avatar_url || null);
+        }
       });
   }, [user]);
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: lang === 'ar' ? 'الملف كبير جداً (الحد 5MB)' : 'File too large (max 5MB)', variant: 'destructive' });
+      return;
+    }
+    setUploading(true);
+    try {
+      const ext = file.name.split('.').pop();
+      const filePath = `profile-photos/${user.id}/${Date.now()}.${ext}`;
+      const { uploadToBunny } = await import('@/lib/bunnyUpload');
+      const url = await uploadToBunny(file, filePath);
+      await supabase.from('profiles').update({ avatar_url: url }).eq('user_id', user.id);
+      setAvatarUrl(url);
+      toast({ title: lang === 'ar' ? 'تم تحديث الصورة' : 'Photo updated' });
+    } catch (error: any) {
+      toast({ title: t('auth.error'), description: error.message, variant: 'destructive' });
+    } finally {
+      setUploading(false);
+      // Reset the input so the same file can be selected again
+      if (photoRef.current) photoRef.current.value = '';
+    }
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,11 +80,36 @@ const Profile = () => {
       </header>
 
       <main className="flex-1 overflow-y-auto container mx-auto px-4 py-8 max-w-lg pb-24">
+        {/* Avatar upload */}
         <div className="flex justify-center mb-6">
-          <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
-            <User className="w-10 h-10 text-primary" />
-          </div>
+          <button
+            type="button"
+            onClick={() => photoRef.current?.click()}
+            disabled={uploading}
+            className="relative w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden border-2 border-dashed border-primary/30 hover:border-primary transition-colors"
+          >
+            {uploading ? (
+              <Loader2 className="w-8 h-8 text-primary animate-spin" />
+            ) : avatarUrl ? (
+              <img src={avatarUrl} alt="" className="w-20 h-20 rounded-full object-cover" />
+            ) : (
+              <User className="w-10 h-10 text-primary" />
+            )}
+            <div className="absolute bottom-0 inset-x-0 bg-primary/80 text-primary-foreground text-[9px] py-0.5 text-center">
+              <Camera className="w-3 h-3 mx-auto" />
+            </div>
+          </button>
+          <input
+            ref={photoRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handlePhotoUpload}
+          />
         </div>
+        <p className="text-center text-xs text-muted-foreground mb-6">
+          {lang === 'ar' ? 'اضغط لتغيير صورتك' : 'Tap to change your photo'}
+        </p>
 
         <form onSubmit={handleSave} className="bg-card rounded-2xl border border-border p-6 space-y-5">
           <div className="space-y-2">

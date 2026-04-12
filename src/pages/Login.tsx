@@ -68,7 +68,7 @@ const Login = () => {
               <Label htmlFor="email">{t('auth.email')}</Label>
               <div className="relative">
                 <Mail className="absolute start-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input id="email" type="email" placeholder="name@example.com" className="ps-10"
+                <Input id="email" name="email" type="email" placeholder="name@example.com" className="ps-10"
                   autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
               </div>
             </div>
@@ -77,7 +77,7 @@ const Login = () => {
               <Label htmlFor="phone">{lang === 'ar' ? 'رقم الهاتف' : 'Phone Number'}</Label>
               <div className="relative">
                 <Phone className="absolute start-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input id="phone" type="tel" placeholder="01XXXXXXXXX" className="ps-10"
+                <Input id="phone" name="phone" type="tel" placeholder="01XXXXXXXXX" className="ps-10"
                   autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} required />
               </div>
             </div>
@@ -87,7 +87,7 @@ const Login = () => {
             <Label htmlFor="password">{t('auth.password')}</Label>
             <div className="relative">
               <Lock className="absolute start-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input id="password" type={showPassword ? 'text' : 'password'} placeholder="••••••••" className="ps-10 pe-10"
+              <Input id="password" name="password" type={showPassword ? 'text' : 'password'} placeholder="••••••••" className="ps-10 pe-10"
                 autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
               <button type="button" onClick={() => setShowPassword(!showPassword)}
                 className="absolute end-3 top-3 text-muted-foreground hover:text-foreground">
