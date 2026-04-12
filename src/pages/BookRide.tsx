@@ -12,7 +12,7 @@ import PlacesAutocomplete from '@/components/PlacesAutocomplete';
 import {
   MapPin, Clock, Users, ArrowRight, ChevronLeft, ChevronRight,
   Calendar, AlertCircle, Car, User as UserIcon, Loader2, CheckCircle2,
-  Navigation, Upload, Image as ImageIcon, ListOrdered, Phone, History, Package, Bookmark
+  Navigation, Upload, Image as ImageIcon, ListOrdered, Phone, History, Package, Bookmark, Star
 } from 'lucide-react';
 
 /** Haversine distance in km */
@@ -37,6 +37,8 @@ const BookRide = () => {
   const [searchPickup, setSearchPickup] = useState('');
   const [searchDropoff, setSearchDropoff] = useState('');
   const [loading, setLoading] = useState(false);
+  const [allRouteStops, setAllRouteStops] = useState<Record<string, any[]>>({});
+  const [driverRatings, setDriverRatings] = useState<Record<string, { avg: number; count: number }>>({});
   const [step, setStep] = useState<'browse' | 'details'>('browse');
 
   // Pickup
@@ -106,14 +108,34 @@ const BookRide = () => {
     if (data && data.length > 0) {
       const driverIds = [...new Set(data.map(r => r.driver_id))];
       const shuttleIds = [...new Set(data.map(r => r.shuttle_id))];
-      const [{ data: profiles }, { data: shuttles }] = await Promise.all([
+      const routeIds = [...new Set(data.map(r => r.route_id))];
+      const [{ data: profiles }, { data: shuttles }, { data: stops }, { data: ratings }] = await Promise.all([
         supabase.from('profiles').select('user_id, full_name, avatar_url, phone').in('user_id', driverIds),
         supabase.from('shuttles').select('id, vehicle_model, vehicle_plate, capacity').in('id', shuttleIds),
+        routeIds.length > 0 ? supabase.from('stops').select('*').in('route_id', routeIds) : { data: [] },
+        driverIds.length > 0 ? supabase.from('ratings').select('driver_id, rating').in('driver_id', driverIds) : { data: [] },
       ]);
       const pMap: Record<string, any> = {};
       (profiles || []).forEach(p => { pMap[p.user_id] = p; });
       const sMap: Record<string, any> = {};
       (shuttles || []).forEach(s => { sMap[s.id] = s; });
+      // Build stops map per route
+      const stopsMap: Record<string, any[]> = {};
+      (stops || []).forEach(s => { if (!stopsMap[s.route_id]) stopsMap[s.route_id] = []; stopsMap[s.route_id].push(s); });
+      setAllRouteStops(stopsMap);
+      // Build driver ratings
+      const ratingsMap: Record<string, { total: number; count: number }> = {};
+      (ratings || []).forEach(r => {
+        if (!r.driver_id) return;
+        if (!ratingsMap[r.driver_id]) ratingsMap[r.driver_id] = { total: 0, count: 0 };
+        ratingsMap[r.driver_id].total += r.rating;
+        ratingsMap[r.driver_id].count += 1;
+      });
+      const driverRatingsResult: Record<string, { avg: number; count: number }> = {};
+      Object.entries(ratingsMap).forEach(([id, { total, count }]) => {
+        driverRatingsResult[id] = { avg: total / count, count };
+      });
+      setDriverRatings(driverRatingsResult);
       setRideInstances(data.map(r => ({ ...r, driver_profile: pMap[r.driver_id], shuttle_info: sMap[r.shuttle_id] })));
     } else {
       setRideInstances([]);
@@ -184,31 +206,27 @@ const BookRide = () => {
     }
   };
 
-  const filteredRides = rideInstances.filter((ri) => {
+  // Smart search: matches route name, origin, destination, stops in AR/EN, partial, numbers
+  const smartMatchRoute = (query: string, ri: any): boolean => {
+    if (!query.trim()) return true;
+    const q = query.toLowerCase().trim();
     const route = ri.routes;
     if (!route) return false;
-    if (searchPickup) {
-      const q = searchPickup.toLowerCase();
-      const originEn = route.origin_name_en?.toLowerCase() || '';
-      const originAr = route.origin_name_ar || '';
-      const destEn = route.destination_name_en?.toLowerCase() || '';
-      const destAr = route.destination_name_ar || '';
-      const matchesPickup = ri.direction === 'return'
-        ? (destEn.startsWith(q) || destAr.startsWith(q))
-        : (originEn.startsWith(q) || originAr.startsWith(q));
-      if (!matchesPickup) return false;
-    }
-    if (searchDropoff) {
-      const q = searchDropoff.toLowerCase();
-      const originEn = route.origin_name_en?.toLowerCase() || '';
-      const originAr = route.origin_name_ar || '';
-      const destEn = route.destination_name_en?.toLowerCase() || '';
-      const destAr = route.destination_name_ar || '';
-      const matchesDropoff = ri.direction === 'return'
-        ? (originEn.startsWith(q) || originAr.startsWith(q))
-        : (destEn.startsWith(q) || destAr.startsWith(q));
-      if (!matchesDropoff) return false;
-    }
+    const fields: string[] = [
+      route.name_en, route.name_ar,
+      route.origin_name_en, route.origin_name_ar,
+      route.destination_name_en, route.destination_name_ar,
+    ];
+    // Add stop names for this route
+    const stops = allRouteStops[ri.route_id] || [];
+    stops.forEach((s: any) => { fields.push(s.name_en, s.name_ar); });
+    return fields.some(f => f && f.toLowerCase().includes(q));
+  };
+
+  const filteredRides = rideInstances.filter((ri) => {
+    if (!ri.routes) return false;
+    if (searchPickup && !smartMatchRoute(searchPickup, ri)) return false;
+    if (searchDropoff && !smartMatchRoute(searchDropoff, ri)) return false;
     return true;
   });
 
@@ -702,6 +720,13 @@ const BookRide = () => {
                             <Car className="w-3 h-3" />
                             <span>{ride.shuttle_info?.vehicle_model} · {ride.shuttle_info?.vehicle_plate}</span>
                           </div>
+                          {driverRatings[ride.driver_id] && (
+                            <div className="flex items-center gap-1 text-xs mt-0.5">
+                              <Star className="w-3 h-3 fill-secondary text-secondary" />
+                              <span className="font-medium text-foreground">{driverRatings[ride.driver_id].avg.toFixed(1)}</span>
+                              <span className="text-muted-foreground">({driverRatings[ride.driver_id].count})</span>
+                            </div>
+                          )}
                         </div>
                         <span className="text-lg font-bold text-primary">{ride.routes?.price} EGP</span>
                       </div>

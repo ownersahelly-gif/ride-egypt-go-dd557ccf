@@ -14,7 +14,7 @@ import {
   MapPin, Clock, Users, ArrowRight, Calendar, AlertCircle, Car,
   User as UserIcon, Loader2, CheckCircle2,
   Upload, ListOrdered, History, Package,
-  Globe, LogOut, Shield, ChevronLeft, ChevronRight
+  Globe, LogOut, Shield, ChevronLeft, ChevronRight, Star
 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 
@@ -59,6 +59,7 @@ const Dashboard = () => {
   const [selectedRide, setSelectedRide] = useState<any>(null);
   const [driverProfile, setDriverProfile] = useState<any>(null);
   const [shuttleInfo, setShuttleInfo] = useState<any>(null);
+  const [driverRatings, setDriverRatings] = useState<Record<string, { avg: number; count: number }>>({});
 
   // Detail step states
   const [pickupMode, setPickupMode] = useState<'start' | 'stop'>('start');
@@ -182,17 +183,31 @@ const Dashboard = () => {
         return goMatch || returnMatch;
       });
 
-      // Enrich with driver/shuttle info
+      // Enrich with driver/shuttle info + ratings
       const driverIds = [...new Set(matchedRides.map(r => r.driver_id))];
       const shuttleIds = [...new Set(matchedRides.map(r => r.shuttle_id))];
-      const [{ data: profiles }, { data: shuttles }] = await Promise.all([
+      const [{ data: profiles }, { data: shuttles }, { data: ratings }] = await Promise.all([
         driverIds.length > 0 ? supabase.from('profiles').select('user_id, full_name, avatar_url, phone').in('user_id', driverIds) : { data: [] },
         shuttleIds.length > 0 ? supabase.from('shuttles').select('id, vehicle_model, vehicle_plate, capacity').in('id', shuttleIds) : { data: [] },
+        driverIds.length > 0 ? supabase.from('ratings').select('driver_id, rating').in('driver_id', driverIds) : { data: [] },
       ]);
       const pMap: Record<string, any> = {};
       (profiles || []).forEach(p => { pMap[p.user_id] = p; });
       const sMap: Record<string, any> = {};
       (shuttles || []).forEach(s => { sMap[s.id] = s; });
+      // Build driver ratings
+      const ratingsMap: Record<string, { total: number; count: number }> = {};
+      (ratings || []).forEach(r => {
+        if (!r.driver_id) return;
+        if (!ratingsMap[r.driver_id]) ratingsMap[r.driver_id] = { total: 0, count: 0 };
+        ratingsMap[r.driver_id].total += r.rating;
+        ratingsMap[r.driver_id].count += 1;
+      });
+      const driverRatingsResult: Record<string, { avg: number; count: number }> = {};
+      Object.entries(ratingsMap).forEach(([id, { total, count }]) => {
+        driverRatingsResult[id] = { avg: total / count, count };
+      });
+      setDriverRatings(driverRatingsResult);
       setRideInstances(matchedRides.map(r => ({ ...r, driver_profile: pMap[r.driver_id], shuttle_info: sMap[r.shuttle_id] })));
     } else {
       setRideInstances([]);
@@ -754,6 +769,13 @@ const Dashboard = () => {
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-foreground text-sm truncate">{ride.driver_profile?.full_name || (lang === 'ar' ? 'سائق' : 'Driver')}</p>
                         <div className="flex items-center gap-1 text-xs text-muted-foreground"><Car className="w-3 h-3" /><span>{ride.shuttle_info?.vehicle_model}</span></div>
+                        {driverRatings[ride.driver_id] && (
+                          <div className="flex items-center gap-1 text-xs mt-0.5">
+                            <Star className="w-3 h-3 fill-secondary text-secondary" />
+                            <span className="font-medium text-foreground">{driverRatings[ride.driver_id].avg.toFixed(1)}</span>
+                            <span className="text-muted-foreground">({driverRatings[ride.driver_id].count})</span>
+                          </div>
+                        )}
                       </div>
                       <div className="text-end"><span className="text-lg font-bold text-primary">{ride.routes?.price ?? '...'} EGP</span></div>
                     </div>
