@@ -700,18 +700,20 @@ const DriverDashboard = () => {
                         const isAdHoc = slot.scheduleId.startsWith('adhoc_');
                         const isTestTrip = !!firstTodayTrip && firstTodayTrip.scheduleId === slot.scheduleId && firstTodayTrip.direction === slot.direction;
 
-                        // Time gate: can only start within 2 hours before departure
+                        // Time gate: can start from 2h before up to 30 min after departure
                         const [slotH, slotM] = slot.time.split(':').map(Number);
                         const slotDate = new Date(slot.dateStr + 'T00:00:00');
                         slotDate.setHours(slotH, slotM, 0);
                         const msUntilDeparture = slotDate.getTime() - Date.now();
-                        const withinTwoHours = msUntilDeparture <= 2 * 60 * 60 * 1000 && msUntilDeparture > 0;
+                        const msSinceDeparture = -msUntilDeparture;
+                        const withinStartWindow = msUntilDeparture <= 2 * 60 * 60 * 1000 && msSinceDeparture <= 30 * 60 * 1000;
+                        const isExpired = isToday && msSinceDeparture > 30 * 60 * 1000;
 
                         // Find schedule's min_passengers
                         const scheduleEntry = driverSchedules.find(s => s.id === slot.scheduleId);
                         const minPassengers = scheduleEntry?.min_passengers || 5;
                         const hasEnoughPassengers = slotBookings.length >= minPassengers;
-                        const canStart = shuttle.status === 'active' && isToday && withinTwoHours && (slotBookings.length > 0 || isTestTrip || isAdHoc);
+                        const canStart = shuttle.status === 'active' && isToday && withinStartWindow && !isExpired && (slotBookings.length > 0 || isTestTrip || isAdHoc);
                         const belowMinimum = canStart && slotBookings.length > 0 && !hasEnoughPassengers && !isTestTrip;
 
                         const routeOrigin = { lat: slot.routeInfo?.origin_lat || 0, lng: slot.routeInfo?.origin_lng || 0 };
@@ -725,7 +727,7 @@ const DriverDashboard = () => {
 
                         return (
                           <div key={key} className={`bg-card border rounded-2xl overflow-hidden transition-all ${
-                            slot.isPast ? 'border-border' : slot.direction === 'go' ? 'border-green-200' : 'border-blue-200'
+                            isExpired ? 'border-destructive/30 opacity-70' : slot.isPast ? 'border-border' : slot.direction === 'go' ? 'border-green-200' : 'border-blue-200'
                           }`}>
                             <div className="flex items-stretch">
                               <button
@@ -742,9 +744,11 @@ const DriverDashboard = () => {
                                   <div>
                                     <div className="flex items-center gap-2">
                                       <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
-                                        slot.isPast ? 'bg-muted text-muted-foreground' : slot.direction === 'go' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+                                        isExpired ? 'bg-destructive/10 text-destructive' : slot.isPast ? 'bg-muted text-muted-foreground' : slot.direction === 'go' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
                                       }`}>
-                                        {slot.isPast
+                                        {isExpired
+                                          ? (lang === 'ar' ? '⚠ فات الموعد' : '⚠ Expired')
+                                          : slot.isPast
                                           ? (lang === 'ar' ? 'انتهت' : 'Passed')
                                           : slot.direction === 'go' ? (lang === 'ar' ? 'ذهاب' : 'Going') : (lang === 'ar' ? 'عودة' : 'Returning')}
                                       </span>
@@ -789,8 +793,38 @@ const DriverDashboard = () => {
                                   </div>
                                 )}
 
+                                {/* Expired trip warning */}
+                                {isExpired && slotBookings.length > 0 && (
+                                  <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-4 space-y-2">
+                                    <div className="flex items-start gap-2">
+                                      <AlertCircle className="w-5 h-5 text-destructive mt-0.5 shrink-0" />
+                                      <div>
+                                        <p className="text-sm font-medium text-destructive">
+                                          {lang === 'ar'
+                                            ? 'فات الموعد بأكثر من 30 دقيقة — تم إلغاء الرحلة تلقائياً'
+                                            : 'Departure exceeded by 30+ minutes — trip auto-cancelled'}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                          {lang === 'ar'
+                                            ? `${slotBookings.length} راكب تم إبلاغهم بالإلغاء`
+                                            : `${slotBookings.length} passenger(s) have been notified`}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {isExpired && slotBookings.length === 0 && (
+                                  <div className="bg-muted/50 rounded-xl p-3 flex items-center gap-2">
+                                    <Clock className="w-4 h-4 text-muted-foreground" />
+                                    <p className="text-sm text-muted-foreground">
+                                      {lang === 'ar' ? 'فات موعد الرحلة ولم يكن هناك ركاب' : 'Trip time passed with no passengers'}
+                                    </p>
+                                  </div>
+                                )}
+
                                 {/* Status message */}
-                                {!isToday && (
+                                {!isToday && !isExpired && (
                                   <div className="bg-muted/50 rounded-xl p-3 flex items-center gap-2">
                                     <Clock className="w-4 h-4 text-muted-foreground" />
                                     <p className="text-sm text-muted-foreground">
@@ -801,7 +835,7 @@ const DriverDashboard = () => {
                                   </div>
                                 )}
 
-                                {isToday && !canStart && slotBookings.length === 0 && (
+                                {isToday && !canStart && !isExpired && slotBookings.length === 0 && (
                                   <div className="bg-muted/50 rounded-xl p-3 flex items-center gap-2">
                                     <Users className="w-4 h-4 text-muted-foreground" />
                                     <p className="text-sm text-muted-foreground">
