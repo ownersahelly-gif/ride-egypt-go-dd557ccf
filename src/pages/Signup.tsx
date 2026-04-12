@@ -99,6 +99,8 @@ const CompanySignup = ({ lang, t, appName, signUp, navigate, toast, referralCode
   const [numRoutes, setNumRoutes] = useState('');
   const [bankDetails, setBankDetails] = useState('');
 
+  const generateSixDigitCode = () => String(Math.floor(100000 + Math.random() * 900000));
+
   const handleSubmit = async () => {
     if (!acceptedTerms) {
       toast({ title: lang === 'ar' ? 'يجب الموافقة على الشروط والأحكام' : 'You must accept the Terms & Conditions', variant: 'destructive' });
@@ -130,15 +132,14 @@ const CompanySignup = ({ lang, t, appName, signUp, navigate, toast, referralCode
           accepted_terms_at: new Date().toISOString(),
         }).eq('user_id', userId);
 
-        // Create partner company
-        const referralCode = companyName.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 8) + Math.random().toString(36).slice(2, 6);
+        // Create partner company with 6-digit referral code
         await supabase.from('partner_companies').insert({
           user_id: userId,
           name: companyName,
           contact_email: email,
           contact_phone: phone,
           bank_details: bankDetails || null,
-          referral_code: referralCode,
+          referral_code: generateSixDigitCode(),
           notes: `Clients: ${numClients}, Drivers: ${numDrivers}, Routes: ${numRoutes}`,
         });
 
