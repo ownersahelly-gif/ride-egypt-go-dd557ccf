@@ -69,7 +69,7 @@ const Login = () => {
               <div className="relative">
                 <Mail className="absolute start-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input id="email" type="email" placeholder="name@example.com" className="ps-10"
-                  value={email} onChange={(e) => setEmail(e.target.value)} required />
+                  autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
               </div>
             </div>
           ) : (
@@ -78,7 +78,7 @@ const Login = () => {
               <div className="relative">
                 <Phone className="absolute start-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input id="phone" type="tel" placeholder="01XXXXXXXXX" className="ps-10"
-                  value={phone} onChange={(e) => setPhone(e.target.value)} required />
+                  autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} required />
               </div>
             </div>
           )}
@@ -88,7 +88,7 @@ const Login = () => {
             <div className="relative">
               <Lock className="absolute start-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input id="password" type={showPassword ? 'text' : 'password'} placeholder="••••••••" className="ps-10 pe-10"
-                value={password} onChange={(e) => setPassword(e.target.value)} required />
+                autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
               <button type="button" onClick={() => setShowPassword(!showPassword)}
                 className="absolute end-3 top-3 text-muted-foreground hover:text-foreground">
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}

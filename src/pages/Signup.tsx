@@ -359,7 +359,7 @@ const Signup = () => {
               <Label>{t('auth.fullName')}</Label>
               <div className="relative">
                 <User className="absolute start-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input placeholder={t('auth.fullNamePlaceholder')} className="ps-10" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+                <Input placeholder={t('auth.fullNamePlaceholder')} className="ps-10" autoComplete="name" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
               </div>
             </div>
 
@@ -367,7 +367,7 @@ const Signup = () => {
               <Label>{lang === 'ar' ? 'رقم الهاتف' : 'Phone Number'}</Label>
               <div className="relative">
                 <Phone className="absolute start-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input type="tel" placeholder="01xxxxxxxxx" className="ps-10" value={phone} onChange={(e) => setPhone(e.target.value)} required />
+                <Input type="tel" placeholder="01xxxxxxxxx" className="ps-10" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} required />
               </div>
             </div>
 
@@ -375,7 +375,7 @@ const Signup = () => {
               <Label>{t('auth.email')}</Label>
               <div className="relative">
                 <Mail className="absolute start-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input type="email" placeholder="name@example.com" className="ps-10" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                <Input type="email" placeholder="name@example.com" className="ps-10" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
               </div>
             </div>
 
@@ -383,7 +383,7 @@ const Signup = () => {
               <Label>{t('auth.password')}</Label>
               <div className="relative">
                 <Lock className="absolute start-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input type={showPassword ? 'text' : 'password'} placeholder="••••••••" className="ps-10 pe-10" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                <Input type={showPassword ? 'text' : 'password'} placeholder="••••••••" className="ps-10 pe-10" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute end-3 top-3 text-muted-foreground hover:text-foreground">
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -406,8 +406,8 @@ const Signup = () => {
 
   // Driver: multi-step form
   return (
-    <div className="min-h-screen flex items-center justify-center bg-surface px-4 py-8">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-surface px-4 py-8 overflow-y-auto">
+      <div className="w-full max-w-md mx-auto">
         <div className="text-center mb-4">
           <Link to="/" className="text-3xl font-bold text-primary font-arabic">
             {lang === 'ar' ? 'مسار' : 'Massar'}
@@ -424,7 +424,7 @@ const Signup = () => {
 
         <StepIndicator current={driverStep} total={3} />
 
-        <div className="bg-card rounded-2xl shadow-card p-6 space-y-4">
+        <div className="bg-card rounded-2xl shadow-card p-6 space-y-4 mb-8">
           <button
             type="button"
             onClick={() => {
@@ -446,26 +446,26 @@ const Signup = () => {
                 <Label>{t('auth.fullName')}</Label>
                 <div className="relative">
                   <User className="absolute start-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input placeholder={t('auth.fullNamePlaceholder')} className="ps-10" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
-                </div>
+                <Input placeholder={t('auth.fullNamePlaceholder')} className="ps-10" autoComplete="name" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
               </div>
+            </div>
 
-              <div className="space-y-2">
-                <Label>{lang === 'ar' ? 'رقم الهاتف' : 'Phone Number'}</Label>
-                <div className="relative">
-                  <Phone className="absolute start-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input type="tel" placeholder="01xxxxxxxxx" className="ps-10" value={phone} onChange={(e) => setPhone(e.target.value)} required />
-                </div>
+            <div className="space-y-2">
+              <Label>{lang === 'ar' ? 'رقم الهاتف' : 'Phone Number'}</Label>
+              <div className="relative">
+                <Phone className="absolute start-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input type="tel" placeholder="01xxxxxxxxx" className="ps-10" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} required />
               </div>
+            </div>
 
-              <div className="space-y-2">
-                <Label>{t('auth.password')}</Label>
-                <div className="relative">
-                  <Lock className="absolute start-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input type={showPassword ? 'text' : 'password'} placeholder="••••••••" className="ps-10 pe-10" value={password} onChange={(e) => setPassword(e.target.value)} required />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute end-3 top-3 text-muted-foreground hover:text-foreground">
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
+            <div className="space-y-2">
+              <Label>{t('auth.password')}</Label>
+              <div className="relative">
+                <Lock className="absolute start-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input type={showPassword ? 'text' : 'password'} placeholder="••••••••" className="ps-10 pe-10" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute end-3 top-3 text-muted-foreground hover:text-foreground">
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
                 </div>
               </div>
 
