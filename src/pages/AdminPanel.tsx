@@ -532,6 +532,7 @@ const AdminPanel = () => {
     { key: 'approvals', icon: CheckCircle2, label: lang === 'ar' ? 'الموافقات' : 'Approvals' },
     { key: 'carpool', icon: Car, label: lang === 'ar' ? 'مشاركة الرحلات' : 'Carpool' },
     { key: 'routes', icon: Route, label: lang === 'ar' ? 'المسارات' : 'Routes' },
+    { key: 'packages', icon: Package, label: lang === 'ar' ? 'الباقات' : 'Packages' },
     { key: 'drivers', icon: Users, label: lang === 'ar' ? 'السائقين' : 'Drivers' },
     { key: 'shuttles', icon: Car, label: lang === 'ar' ? 'الشاتلات' : 'Shuttles' },
     { key: 'bookings', icon: Ticket, label: lang === 'ar' ? 'الحجوزات' : 'Bookings' },
