@@ -304,7 +304,7 @@ const ActiveRide = () => {
     let cancelled = false;
     let prevLat = 0;
     let prevLng = 0;
-    const MIN_MOVE_M = 3; // Skip updates if moved less than 3m (noise filter)
+    const MIN_MOVE_M = 8; // Skip updates if moved less than 8m (noise filter)
 
     const broadcastChannel = supabase.channel(`shuttle-live-${shuttle.id}`);
     broadcastChannel.subscribe();
