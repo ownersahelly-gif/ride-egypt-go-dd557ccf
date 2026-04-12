@@ -172,13 +172,8 @@ const PartnerDashboard = () => {
   // No partner account yet
   if (!partner) {
     return (
-      <div className="min-h-screen bg-background pb-24">
-        <div className="bg-primary text-primary-foreground px-4 pt-12 pb-8">
-          <div className="flex items-center gap-3 mb-6">
-            <Link to="/dashboard" className="p-2 rounded-full bg-primary-foreground/10"><Back className="w-5 h-5" /></Link>
-            <h1 className="text-xl font-bold">{lang === 'ar' ? 'برنامج الشراكة' : 'Partner Program'}</h1>
-          </div>
-        </div>
+      <div className="min-h-screen bg-background overflow-y-auto">
+        <PartnerHeader title={lang === 'ar' ? 'برنامج الشراكة' : 'Partner Program'} />
 
         <div className="px-4 py-8 max-w-md mx-auto">
           {!showApply ? (
@@ -231,7 +226,8 @@ const PartnerDashboard = () => {
             </div>
           )}
         </div>
-        <BottomNav />
+
+      </div>
       </div>
     );
   }
@@ -239,13 +235,8 @@ const PartnerDashboard = () => {
   // Pending approval
   if (partner.status === 'pending') {
     return (
-      <div className="min-h-screen bg-background pb-24">
-        <div className="bg-primary text-primary-foreground px-4 pt-12 pb-8">
-          <div className="flex items-center gap-3 mb-6">
-            <Link to="/dashboard" className="p-2 rounded-full bg-primary-foreground/10"><Back className="w-5 h-5" /></Link>
-            <h1 className="text-xl font-bold">{lang === 'ar' ? 'برنامج الشراكة' : 'Partner Program'}</h1>
-          </div>
-        </div>
+      <div className="min-h-screen bg-background overflow-y-auto">
+        <PartnerHeader title={lang === 'ar' ? 'برنامج الشراكة' : 'Partner Program'} />
         <div className="px-4 py-8 max-w-md mx-auto text-center">
           <Clock className="w-16 h-16 text-amber-500 mx-auto mb-4" />
           <h2 className="text-xl font-bold text-foreground mb-2">{lang === 'ar' ? 'طلبك قيد المراجعة' : 'Application Under Review'}</h2>
