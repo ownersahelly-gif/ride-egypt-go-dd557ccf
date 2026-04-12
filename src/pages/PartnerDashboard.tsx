@@ -7,11 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import BottomNav from '@/components/BottomNav';
 import PlacesAutocomplete from '@/components/PlacesAutocomplete';
 import {
   Building2, Link2, Copy, Users, DollarSign, Route, Plus, Loader2,
-  CheckCircle2, Clock, XCircle, ChevronLeft, ChevronRight, MapPin, Trash2
+  CheckCircle2, Clock, XCircle, ChevronLeft, ChevronRight, MapPin, Trash2,
+  Globe, LogOut, User
 } from 'lucide-react';
 
 const PartnerDashboard = () => {
