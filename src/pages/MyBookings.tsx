@@ -291,25 +291,25 @@ const MyBookings = () => {
                     <span>{booking.seats} {t('booking.seat')}</span>
                   </div>
 
-                  {/* Expired trip warning — 30+ min past departure, trip never started */}
+                  {/* Expired trip — 30+ min past departure, driver never started = treat as driver-cancelled */}
                   {['confirmed', 'pending'].includes(booking.status) && (() => {
                     const [h, m] = (booking.scheduled_time || '00:00').split(':').map(Number);
                     const depTime = new Date(booking.scheduled_date + 'T00:00:00');
                     depTime.setHours(h, m, 0);
-                    const msSince = Date.now() - depTime.getTime();
-                    const isExpired = msSince > 30 * 60 * 1000;
+                    const isExpired = (Date.now() - depTime.getTime()) > 30 * 60 * 1000;
                     if (!isExpired) return null;
                     return (
-                      <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 mb-3 flex items-start gap-2">
-                        <AlertCircle className="w-4 h-4 text-destructive mt-0.5 shrink-0" />
-                        <div>
-                          <p className="text-sm font-medium text-destructive">
-                            {lang === 'ar' ? 'لم يبدأ السائق الرحلة في الوقت المحدد' : 'Driver did not start the trip on time'}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {lang === 'ar' ? 'فات الموعد بأكثر من 30 دقيقة — تم إلغاء الرحلة' : 'Departure passed by 30+ minutes — trip cancelled'}
-                          </p>
-                        </div>
+                      <div className="bg-destructive/15 border-2 border-destructive/30 rounded-xl p-4 mb-3 text-center">
+                        <Ban className="w-10 h-10 text-destructive mx-auto mb-2" />
+                        <p className="text-lg font-extrabold text-destructive uppercase tracking-wide">
+                          {lang === 'ar' ? 'ملغاة' : 'CANCELLED'}
+                        </p>
+                        <p className="text-sm text-destructive/80 font-medium mt-1">
+                          {lang === 'ar' ? 'تم الإلغاء بواسطة السائق — انتظر استرداد كامل المبلغ' : 'Cancelled by the driver — wait for your full refund'}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          {lang === 'ar' ? 'لم يبدأ السائق الرحلة في الوقت المحدد' : 'Driver did not start the trip on time'}
+                        </p>
                       </div>
                     );
                   })()}
