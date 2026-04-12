@@ -27,6 +27,11 @@ const AdminPanel = () => {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
 
+  // App name settings
+  const [appNameEnSetting, setAppNameEnSetting] = useState('Massar');
+  const [appNameArSetting, setAppNameArSetting] = useState('مسار');
+  const [savingAppName, setSavingAppName] = useState(false);
+
   // InstaPay settings
   const [instapayPhone, setInstapayPhone] = useState('');
   const [savingPhone, setSavingPhone] = useState(false);
