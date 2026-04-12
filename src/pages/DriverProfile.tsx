@@ -133,7 +133,7 @@ const DriverProfile = () => {
                 </div>
                 {r.comment && <p className="text-sm text-foreground">{r.comment}</p>}
                 <p className="text-xs text-muted-foreground mt-1">
-                  {(r as any).profiles?.full_name || (lang === 'ar' ? 'راكب' : 'Rider')}
+                  {r.reviewer_name || (lang === 'ar' ? 'راكب' : 'Rider')}
                 </p>
               </div>
             ))
