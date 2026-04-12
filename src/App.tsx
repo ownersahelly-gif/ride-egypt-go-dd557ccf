@@ -10,6 +10,7 @@ import Index from "./pages/Index.tsx";
 import Login from "./pages/Login.tsx";
 import Signup from "./pages/Signup.tsx";
 import Dashboard from "./pages/Dashboard.tsx";
+import BookRide from "./pages/BookRide.tsx";
 import MyBookings from "./pages/MyBookings.tsx";
 import RequestRoute from "./pages/RequestRoute.tsx";
 import Profile from "./pages/Profile.tsx";
