@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useAppName } from '@/hooks/useAppName';
 
 type Language = 'en' | 'ar';
 
@@ -7,6 +8,9 @@ interface LanguageContextType {
   setLang: (lang: Language) => void;
   t: (key: string) => string;
   dir: 'ltr' | 'rtl';
+  appName: string;
+  appNameEn: string;
+  appNameAr: string;
 }
 
 const translations: Record<Language, Record<string, string>> = {
@@ -38,7 +42,7 @@ const translations: Record<Language, Record<string, string>> = {
     'how.step3.title': 'Ride & Arrive',
     'how.step3.desc': 'Track your shuttle in real-time. Enjoy a comfortable, affordable ride to your destination.',
     // Features
-    'features.title': 'Why Choose Massar?',
+    'features.title': 'Why Choose {appName}?',
     'features.subtitle': 'Built for Egypt, designed for everyone',
     'features.realtime.title': 'Real-Time Tracking',
     'features.realtime.desc': 'Track your shuttle live on the map. Know exactly when it arrives.',
@@ -53,7 +57,7 @@ const translations: Record<Language, Record<string, string>> = {
     'features.seats.title': 'Seat Reservation',
     'features.seats.desc': 'Reserve your seat in advance. No standing, no overcrowding.',
     // Drivers
-    'drivers.title': 'Drive With Massar',
+    'drivers.title': 'Drive With {appName}',
     'drivers.subtitle': 'Earn more with flexible shuttle driving',
     'drivers.earn': 'Earn consistently with scheduled routes and guaranteed passengers.',
     'drivers.existing': 'Former Uber/Careem driver? Fast-track your onboarding with verified credentials.',
@@ -68,16 +72,16 @@ const translations: Record<Language, Record<string, string>> = {
     'footer.legal': 'Legal',
     'footer.privacy': 'Privacy Policy',
     'footer.terms': 'Terms of Service',
-    'footer.rights': '© 2026 Massar. All rights reserved.',
+    'footer.rights': '© 2026 {appName}. All rights reserved.',
     // CTA
     'cta.title': 'Ready to Ride?',
     'cta.subtitle': 'Download the app and start your journey today.',
     'cta.button': 'Get Started',
     // Auth
     'auth.loginTitle': 'Welcome Back',
-    'auth.loginSubtitle': 'Sign in to your Massar account',
+    'auth.loginSubtitle': 'Sign in to your {appName} account',
     'auth.signupTitle': 'Create Account',
-    'auth.signupSubtitle': 'Join Massar and start riding',
+    'auth.signupSubtitle': 'Join {appName} and start riding',
     'auth.email': 'Email',
     'auth.password': 'Password',
     'auth.fullName': 'Full Name',
@@ -217,7 +221,7 @@ const translations: Record<Language, Record<string, string>> = {
     'how.step2.desc': 'اختر من الشاتلات المتاحة، شاهد الأسعار ووقت الوصول المتوقع. احجز مقعدك فوراً.',
     'how.step3.title': 'اركب وصل',
     'how.step3.desc': 'تتبع الشاتل في الوقت الفعلي. استمتع برحلة مريحة وبأسعار معقولة.',
-    'features.title': 'لماذا مسار؟',
+    'features.title': 'لماذا {appName}؟',
     'features.subtitle': 'مصمم لمصر، مصنوع للجميع',
     'features.realtime.title': 'تتبع مباشر',
     'features.realtime.desc': 'تتبع الشاتل على الخريطة مباشرة. اعرف بالضبط متى يصل.',
@@ -231,7 +235,7 @@ const translations: Record<Language, Record<string, string>> = {
     'features.demand.desc': 'لا يوجد شاتل على مسارك؟ اطلب واحداً وسننشئه عندما يكون الطلب كافياً.',
     'features.seats.title': 'حجز المقاعد',
     'features.seats.desc': 'احجز مقعدك مسبقاً. لا وقوف، لا ازدحام.',
-    'drivers.title': 'قُد مع مسار',
+    'drivers.title': 'قُد مع {appName}',
     'drivers.subtitle': 'اكسب أكثر مع قيادة الشاتل المرنة',
     'drivers.earn': 'اكسب بانتظام مع مسارات مجدولة وركاب مضمونين.',
     'drivers.existing': 'سائق أوبر/كريم سابق؟ سرّع عملية التسجيل بأوراقك الموثقة.',
@@ -239,21 +243,21 @@ const translations: Record<Language, Record<string, string>> = {
     'drivers.cta': 'تقدم للقيادة',
     'footer.tagline': 'خدمة شاتل ذكية لمصر.',
     'footer.company': 'الشركة',
-    'footer.about': 'عن مسار',
+    'footer.about': 'عن {appName}',
     'footer.careers': 'الوظائف',
     'footer.contact': 'اتصل بنا',
     'footer.legal': 'قانوني',
     'footer.privacy': 'سياسة الخصوصية',
     'footer.terms': 'شروط الخدمة',
-    'footer.rights': '© ٢٠٢٦ مسار. جميع الحقوق محفوظة.',
+    'footer.rights': '© ٢٠٢٦ {appName}. جميع الحقوق محفوظة.',
     'cta.title': 'جاهز للركوب؟',
     'cta.subtitle': 'حمّل التطبيق وابدأ رحلتك اليوم.',
     'cta.button': 'ابدأ الآن',
     // Auth
     'auth.loginTitle': 'مرحباً بعودتك',
-    'auth.loginSubtitle': 'سجل دخولك إلى حسابك في مسار',
+    'auth.loginSubtitle': 'سجل دخولك إلى حسابك في {appName}',
     'auth.signupTitle': 'إنشاء حساب',
-    'auth.signupSubtitle': 'انضم إلى مسار وابدأ رحلتك',
+    'auth.signupSubtitle': 'انضم إلى {appName} وابدأ رحلتك',
     'auth.email': 'البريد الإلكتروني',
     'auth.password': 'كلمة المرور',
     'auth.fullName': 'الاسم الكامل',
@@ -376,6 +380,9 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [lang, setLang] = useState<Language>('ar');
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
+  const { appNameEn, appNameAr } = useAppName();
+
+  const appName = lang === 'ar' ? appNameAr : appNameEn;
 
   useEffect(() => {
     document.documentElement.dir = dir;
@@ -387,10 +394,13 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, [lang, dir]);
 
-  const t = (key: string): string => translations[lang][key] || key;
+  const t = (key: string): string => {
+    const raw = translations[lang][key] || key;
+    return raw.replace(/\{appName\}/g, appName);
+  };
 
   return (
-    <LanguageContext.Provider value={{ lang, setLang, t, dir }}>
+    <LanguageContext.Provider value={{ lang, setLang, t, dir, appName, appNameEn, appNameAr }}>
       {children}
     </LanguageContext.Provider>
   );
