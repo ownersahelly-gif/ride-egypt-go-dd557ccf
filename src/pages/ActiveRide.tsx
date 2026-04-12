@@ -157,6 +157,21 @@ const ActiveRide = () => {
       (profilesData || []).forEach(p => { map[p.user_id] = p; });
       setProfiles(map);
     }
+
+    // Fetch unread message counts
+    if (bks.length > 0 && user) {
+      const bkIds = bks.map((b: any) => b.id);
+      const { data: unreadData } = await supabase
+        .from('ride_messages')
+        .select('booking_id')
+        .in('booking_id', bkIds)
+        .neq('sender_id', user.id)
+        .eq('is_read', false);
+      const unread = new Set<string>();
+      (unreadData || []).forEach((m: any) => unread.add(m.booking_id));
+      setUnreadBookings(unread);
+    }
+
     setLoading(false);
   }, [user]);
 
@@ -810,8 +825,11 @@ const ActiveRide = () => {
                               <Button variant="ghost" size="icon" className="h-7 w-7"><Phone className="w-3.5 h-3.5" /></Button>
                             </a>
                           )}
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setChatBookingId(p.bookingId)}>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 relative" onClick={() => setChatBookingId(p.bookingId)}>
                             <MessageCircle className="w-3.5 h-3.5" />
+                            {unreadBookings.has(p.bookingId) && (
+                              <span className="absolute -top-0.5 -end-0.5 w-2.5 h-2.5 bg-destructive rounded-full" />
+                            )}
                           </Button>
                         </div>
                       </div>
@@ -984,6 +1002,11 @@ const ActiveRide = () => {
         isOpen={!!chatBookingId}
         onClose={() => setChatBookingId(null)}
         otherName={chatBookingId ? profiles[bookings.find(b => b.id === chatBookingId)?.user_id]?.full_name : undefined}
+        onRead={() => {
+          if (chatBookingId) {
+            setUnreadBookings(prev => { const next = new Set(prev); next.delete(chatBookingId); return next; });
+          }
+        }}
       />
     </div>
   );
