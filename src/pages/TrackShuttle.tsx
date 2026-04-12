@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,11 +8,12 @@ import MapView from '@/components/MapView';
 import {
   ChevronLeft, ChevronRight, MapPin, Clock, Car, RefreshCw,
   Radio, Users, Navigation, Phone, MessageCircle, Key, ArrowRight,
-  Shield, Share2, ExternalLink, Star, CheckCircle2
+  Shield, Share2, ExternalLink, Star, CheckCircle2, AlertCircle, Heart
 } from 'lucide-react';
 import RideChat from '@/components/RideChat';
 import { useToast } from '@/hooks/use-toast';
 import { useSmoothMarker } from '@/hooks/useSmoothMarker';
+import RideRating from '@/components/RideRating';
 
 interface PassengerStop {
   userId: string;
@@ -23,13 +24,14 @@ interface PassengerStop {
   isCurrentUser: boolean;
   boardingCode?: string;
   status: string;
-  orderIndex: number; // order along the route
+  orderIndex: number;
 }
 
 const TrackShuttle = () => {
   const { user } = useAuth();
   const { t, lang } = useLanguage();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const bookingId = searchParams.get('booking');
   const Back = lang === 'ar' ? ChevronRight : ChevronLeft;
@@ -44,6 +46,7 @@ const TrackShuttle = () => {
   const [isLive, setIsLive] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [sosActive, setSosActive] = useState(false);
+  const [showRating, setShowRating] = useState(false);
   const [driverStopStatus, setDriverStopStatus] = useState<{
     atStopId?: string;
     atStopNameEn?: string;
@@ -55,11 +58,9 @@ const TrackShuttle = () => {
     headingToStopIndex?: number;
   } | null>(null);
 
-  // All bookings on this ride (for calculating stops before current user)
   const [rideBookings, setRideBookings] = useState<any[]>([]);
   const [passengerStops, setPassengerStops] = useState<PassengerStop[]>([]);
 
-  // Smooth marker interpolation for driver position
   const { position: smoothDriverPos, updatePosition: updateSmoothPos } = useSmoothMarker(1200);
 
   const [etaMinutes, setEtaMinutes] = useState<number | null>(null);
@@ -69,7 +70,6 @@ const TrackShuttle = () => {
     typeof Notification !== 'undefined' ? Notification.permission : 'unsupported'
   );
 
-  // Request notification permission on mount
   useEffect(() => {
     if (typeof Notification === 'undefined') return;
     if (Notification.permission === 'default') {
@@ -77,7 +77,7 @@ const TrackShuttle = () => {
     }
   }, []);
 
-  // Proximity notification: notify when shuttle is within ~1km of user's pickup
+  // Proximity notification
   useEffect(() => {
     if (notificationSent || !shuttle?.current_lat || !shuttle?.current_lng || !booking || !route) return;
     if (notifPermission !== 'granted') return;
@@ -86,9 +86,8 @@ const TrackShuttle = () => {
     const pickupLat = booking.custom_pickup_lat ?? route.origin_lat;
     const pickupLng = booking.custom_pickup_lng ?? route.origin_lng;
 
-    // Haversine distance
     const toRad = (d: number) => d * Math.PI / 180;
-    const R = 6371000; // meters
+    const R = 6371000;
     const dLat = toRad(pickupLat - shuttle.current_lat);
     const dLng = toRad(pickupLng - shuttle.current_lng);
     const a = Math.sin(dLat / 2) ** 2 +
@@ -101,11 +100,7 @@ const TrackShuttle = () => {
         ? `الشاتل على بعد أقل من كيلومتر من نقطة الصعود الخاصة بك${etaMinutes ? ` (${etaMinutes} دقيقة)` : ''}`
         : `Your shuttle is less than 1km away from your pickup${etaMinutes ? ` (${etaMinutes} min)` : ''}`;
 
-      new Notification(title, {
-        body,
-        icon: '/favicon.ico',
-        tag: 'shuttle-approaching',
-      } as NotificationOptions);
+      new Notification(title, { body, icon: '/favicon.ico', tag: 'shuttle-approaching' });
       setNotificationSent(true);
     }
   }, [shuttle?.current_lat, shuttle?.current_lng, booking, route, notificationSent, notifPermission, lang, etaMinutes]);
@@ -123,7 +118,6 @@ const TrackShuttle = () => {
       setRoute(bookingData.routes);
       setShuttle(bookingData.shuttles);
 
-      // Fetch driver profile
       if (bookingData.shuttles?.driver_id) {
         const driverId = bookingData.shuttles.driver_id;
         const [profileRes, appRes, ratingsRes] = await Promise.all([
@@ -139,7 +133,6 @@ const TrackShuttle = () => {
         }
       }
 
-      // Fetch all bookings on same shuttle+date+time for ordering
       if (bookingData.shuttle_id && bookingData.scheduled_date) {
         const { data: allBookings } = await supabase
           .from('bookings')
@@ -148,7 +141,6 @@ const TrackShuttle = () => {
           .eq('scheduled_date', bookingData.scheduled_date)
           .eq('scheduled_time', bookingData.scheduled_time)
           .in('status', ['confirmed', 'boarded', 'pending']);
-
         setRideBookings(allBookings || []);
       }
     }
@@ -157,9 +149,26 @@ const TrackShuttle = () => {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Fetch route stops and build passenger stops from predefined stops
+  // Real-time booking status subscription — detect boarded/skipped/completed
+  useEffect(() => {
+    if (!bookingId) return;
+    const channel = supabase
+      .channel(`booking-status-${bookingId}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'bookings',
+        filter: `id=eq.${bookingId}`,
+      }, (payload) => {
+        const updated = payload.new as any;
+        setBooking((prev: any) => ({ ...prev, ...updated }));
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [bookingId]);
+
   const [routeStops, setRouteStops] = useState<any[]>([]);
-  
+
   useEffect(() => {
     if (!route?.id) return;
     const fetchStops = async () => {
@@ -177,47 +186,32 @@ const TrackShuttle = () => {
     if (!route || !routeStops.length || !rideBookings.length || !user) return;
 
     const stops: PassengerStop[] = [];
-
-    // Use predefined route stops, map bookings by pickup_stop_id / dropoff_stop_id
     routeStops.forEach((rs, idx) => {
       rideBookings.forEach((b) => {
         const isMe = b.user_id === user.id;
         const name = isMe ? (lang === 'ar' ? 'أنت' : 'You') : (lang === 'ar' ? 'راكب' : 'Passenger');
-
         if (b.pickup_stop_id === rs.id) {
           stops.push({
-            userId: b.user_id,
-            name,
-            lat: rs.lat,
-            lng: rs.lng,
-            type: 'pickup',
-            isCurrentUser: isMe,
+            userId: b.user_id, name, lat: rs.lat, lng: rs.lng,
+            type: 'pickup', isCurrentUser: isMe,
             boardingCode: isMe ? b.boarding_code : undefined,
-            status: b.status,
-            orderIndex: idx,
+            status: b.status, orderIndex: idx,
           });
         }
-
         if (b.dropoff_stop_id === rs.id && b.status === 'boarded') {
           stops.push({
-            userId: b.user_id,
-            name,
-            lat: rs.lat,
-            lng: rs.lng,
-            type: 'dropoff',
-            isCurrentUser: isMe,
-            status: b.status,
-            orderIndex: idx + 0.5, // dropoffs after pickups at same stop
+            userId: b.user_id, name, lat: rs.lat, lng: rs.lng,
+            type: 'dropoff', isCurrentUser: isMe,
+            status: b.status, orderIndex: idx + 0.5,
           });
         }
       });
     });
-
     stops.sort((a, b) => a.orderIndex - b.orderIndex);
     setPassengerStops(stops);
   }, [route, routeStops, rideBookings, user, lang]);
 
-  // Calculate ETA — consider whether the trip has started or not
+  // ETA calculation
   useEffect(() => {
     if (!booking || !route) return;
     if (typeof google === 'undefined' || !google?.maps?.DirectionsService) return;
@@ -226,14 +220,6 @@ const TrackShuttle = () => {
     const myPickupLng = booking.custom_pickup_lng ?? route.origin_lng;
     const myPickup = { lat: myPickupLat, lng: myPickupLng };
 
-    // Check if departure is in the future
-    const now = new Date();
-    const [h, m, s] = (booking.scheduled_time || '08:00:00').split(':').map(Number);
-    const scheduledDeparture = new Date(booking.scheduled_date + 'T00:00:00');
-    scheduledDeparture.setHours(h, m, s || 0);
-    const msUntilDeparture = scheduledDeparture.getTime() - now.getTime();
-
-    // Find stops before me
     const myProgressVal = passengerStops.find(s => s.isCurrentUser && s.type === 'pickup')?.orderIndex ?? 0;
     const stopsBeforeMe = passengerStops.filter(
       s => s.type === 'pickup' && !s.isCurrentUser && s.orderIndex < myProgressVal && s.status !== 'boarded'
@@ -243,16 +229,12 @@ const TrackShuttle = () => {
     const ds = new google.maps.DirectionsService();
 
     if (shuttle?.current_lat && shuttle?.current_lng && shuttle?.status === 'active') {
-      // Trip has started — use live shuttle position
       const waypoints = stopsBeforeMe.map(s => ({
-        location: new google.maps.LatLng(s.lat, s.lng),
-        stopover: true,
+        location: new google.maps.LatLng(s.lat, s.lng), stopover: true,
       }));
       ds.route({
         origin: { lat: shuttle.current_lat, lng: shuttle.current_lng },
-        destination: myPickup,
-        waypoints,
-        optimizeWaypoints: false,
+        destination: myPickup, waypoints, optimizeWaypoints: false,
         travelMode: google.maps.TravelMode.DRIVING,
       }, (result, status) => {
         if (status === 'OK' && result) {
@@ -263,40 +245,24 @@ const TrackShuttle = () => {
         }
       });
     } else {
-      // Trip hasn't started — driver departs from route origin at scheduled time sharp
-      // ETA = Google driving time from origin → (stops before you) → your pickup + 1 min per stop
       const routeOrigin = { lat: route.origin_lat, lng: route.origin_lng };
-
-      // If user pickup is at (or very near) the route origin and no stops before, ETA is 0
-      const distToOriginM = google.maps.geometry?.spherical
-        ? google.maps.geometry.spherical.computeDistanceBetween(
-            new google.maps.LatLng(myPickup.lat, myPickup.lng),
-            new google.maps.LatLng(routeOrigin.lat, routeOrigin.lng),
-          )
-        : Math.sqrt(
-            Math.pow((myPickup.lat - routeOrigin.lat) * 111320, 2) +
-            Math.pow((myPickup.lng - routeOrigin.lng) * 111320 * Math.cos(myPickup.lat * Math.PI / 180), 2),
-          );
-
+      const distToOriginM = Math.sqrt(
+        Math.pow((myPickup.lat - routeOrigin.lat) * 111320, 2) +
+        Math.pow((myPickup.lng - routeOrigin.lng) * 111320 * Math.cos(myPickup.lat * Math.PI / 180), 2),
+      );
       if (stopsBeforeMe.length === 0 && distToOriginM < 300) {
-        // User is at origin — driver starts here, no travel needed
         setEtaMinutes(0);
       } else {
         const waypoints = stopsBeforeMe.map(s => ({
-          location: new google.maps.LatLng(s.lat, s.lng),
-          stopover: true,
+          location: new google.maps.LatLng(s.lat, s.lng), stopover: true,
         }));
         ds.route({
-          origin: routeOrigin,
-          destination: myPickup,
-          waypoints,
-          optimizeWaypoints: false,
-          travelMode: google.maps.TravelMode.DRIVING,
+          origin: routeOrigin, destination: myPickup, waypoints,
+          optimizeWaypoints: false, travelMode: google.maps.TravelMode.DRIVING,
         }, (result, status) => {
           if (status === 'OK' && result) {
             let driveSeconds = 0;
             result.routes[0]?.legs?.forEach(leg => { driveSeconds += leg.duration?.value ?? 0; });
-            // Add 1 min wait per intermediate stop
             driveSeconds += stopsBeforeMe.length * 60;
             setEtaMinutes(Math.ceil(driveSeconds / 60));
           }
@@ -305,11 +271,10 @@ const TrackShuttle = () => {
     }
   }, [shuttle?.current_lat, shuttle?.current_lng, booking, route, passengerStops]);
 
-  // Instant live location via Supabase Broadcast (no DB round-trip)
+  // Live location via broadcast — STOP if boarded/completed/cancelled
   useEffect(() => {
     if (!shuttle?.id) return;
-    // Stop tracking if passenger is already boarded
-    if (booking?.status === 'boarded') return;
+    if (['boarded', 'completed', 'cancelled'].includes(booking?.status)) return;
 
     const channel = supabase
       .channel(`shuttle-live-${shuttle.id}`)
@@ -320,39 +285,25 @@ const TrackShuttle = () => {
           updateSmoothPos({ lat, lng });
           setIsLive(true);
         }
-        // Update stop-based status from boarding code anchoring
         if (stopId) {
-          setDriverStopStatus({
-            atStopId: stopId,
-            atStopNameEn: stopNameEn,
-            atStopNameAr: stopNameAr,
-            atStopIndex: stopIndex,
-          });
+          setDriverStopStatus({ atStopId: stopId, atStopNameEn: stopNameEn, atStopNameAr: stopNameAr, atStopIndex: stopIndex });
         } else if (headingToStopId) {
-          setDriverStopStatus({
-            headingToStopId,
-            headingToStopNameEn,
-            headingToStopNameAr,
-            headingToStopIndex,
-          });
+          setDriverStopStatus({ headingToStopId, headingToStopNameEn, headingToStopNameAr, headingToStopIndex });
         }
       })
       .subscribe();
-
     return () => { supabase.removeChannel(channel); };
   }, [shuttle?.id, booking?.status]);
 
-  // Fallback: postgres_changes + polling for when broadcast misses
+  // Fallback: postgres_changes + polling
   useEffect(() => {
     if (!shuttle?.id) return;
-    if (booking?.status === 'boarded') return;
+    if (['boarded', 'completed', 'cancelled'].includes(booking?.status)) return;
 
     const channel = supabase
       .channel(`shuttle-track-${shuttle.id}`)
       .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'shuttles',
+        event: 'UPDATE', schema: 'public', table: 'shuttles',
         filter: `id=eq.${shuttle.id}`,
       }, (payload) => {
         const newData = payload.new as any;
@@ -363,63 +314,194 @@ const TrackShuttle = () => {
       })
       .subscribe();
 
-    // Polling fallback every 15s
     const interval = setInterval(async () => {
-      const { data } = await supabase
-        .from('shuttles')
-        .select('current_lat, current_lng, status')
-        .eq('id', shuttle.id)
-        .single();
+      const { data } = await supabase.from('shuttles').select('current_lat, current_lng, status').eq('id', shuttle.id).single();
       if (data) setShuttle((prev: any) => ({ ...prev, ...data }));
     }, 15000);
 
-    return () => {
-      supabase.removeChannel(channel);
-      clearInterval(interval);
-    };
+    return () => { supabase.removeChannel(channel); clearInterval(interval); };
   }, [shuttle?.id, booking?.status]);
 
-  // Determine if trip has started based on shuttle status (driver sets it to 'active' when starting)
   const shuttleIsActive = shuttle?.status === 'active';
   const hasLiveGps = !!(smoothDriverPos && shuttleIsActive);
   const isBoarded = booking?.status === 'boarded';
+  const isCompleted = booking?.status === 'completed';
+  const isSkipped = booking?.status === 'cancelled' && booking?.skipped_at;
 
-  // Build tracking markers: shuttle → stops before user → YOU
   const myPickupLat = booking?.custom_pickup_lat ?? route?.origin_lat;
   const myPickupLng = booking?.custom_pickup_lng ?? route?.origin_lng;
 
-  // Find stops before current user along the route
   const myProgress = passengerStops.find(s => s.isCurrentUser && s.type === 'pickup')?.orderIndex ?? 0;
   const stopsBeforeMe = passengerStops.filter(
     s => s.type === 'pickup' && !s.isCurrentUser && s.orderIndex < myProgress && s.status !== 'boarded'
   );
 
   const markers: { lat: number; lng: number; label?: string; color?: 'red' | 'green' | 'blue' | 'orange' | 'purple' }[] = [];
-
-  // Shuttle marker — use smoothly interpolated position
   if (hasLiveGps && smoothDriverPos) {
     markers.push({ lat: smoothDriverPos.lat, lng: smoothDriverPos.lng, label: '🚐', color: 'blue' });
   }
-
-  // Intermediate stop markers (other passengers' pickups before the user)
   stopsBeforeMe.forEach((s, i) => {
     markers.push({ lat: s.lat, lng: s.lng, label: `${i + 1}`, color: 'orange' });
   });
-
-  // Big "YOU" marker — the user's pickup
-  if (myPickupLat && myPickupLng) {
+  if (myPickupLat && myPickupLng && !isBoarded && !isCompleted && !isSkipped) {
     markers.push({ lat: myPickupLat, lng: myPickupLng, label: lang === 'ar' ? 'أنت' : 'YOU', color: 'purple' });
   }
 
-  // Directions: shuttle → (intermediate stops) → user's pickup (only when live)
-  const trackOrigin = (hasLiveGps && smoothDriverPos)
-    ? { lat: smoothDriverPos.lat, lng: smoothDriverPos.lng } : undefined;
-  const trackDestination = (myPickupLat && myPickupLng)
-    ? { lat: myPickupLat, lng: myPickupLng } : undefined;
+  const trackOrigin = (hasLiveGps && smoothDriverPos) ? { lat: smoothDriverPos.lat, lng: smoothDriverPos.lng } : undefined;
+  const trackDestination = (myPickupLat && myPickupLng) ? { lat: myPickupLat, lng: myPickupLng } : undefined;
   const trackWaypoints = stopsBeforeMe.map(s => ({ lat: s.lat, lng: s.lng }));
+
+  // ===== FULL-SCREEN STATUS OVERLAYS =====
+
+  // Completed — "Thank you for using Massar"
+  if (!loading && isCompleted) {
+    return (
+      <div className="h-screen bg-surface flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-20 h-20 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-6">
+          <Heart className="w-10 h-10 text-green-600" />
+        </div>
+        <h1 className="text-2xl font-bold text-foreground mb-2">
+          {lang === 'ar' ? 'شكرًا لاستخدامك مسار!' : 'Thank you for using Massar!'}
+        </h1>
+        <p className="text-muted-foreground mb-8">
+          {lang === 'ar' ? 'نتمنى لك يومًا سعيدًا 🌟' : 'We hope you had a great ride 🌟'}
+        </p>
+        {!showRating && (
+          <Button size="lg" className="mb-4" onClick={() => setShowRating(true)}>
+            <Star className="w-4 h-4 me-2" />
+            {lang === 'ar' ? 'قيّم رحلتك' : 'Rate your ride'}
+          </Button>
+        )}
+        {showRating && booking && shuttle?.driver_id && (
+          <div className="w-full max-w-sm mb-4">
+            <RideRating bookingId={booking.id} driverId={shuttle.driver_id} onDone={() => setShowRating(false)} />
+          </div>
+        )}
+        <Link to="/my-bookings">
+          <Button variant="outline" size="lg">
+            {lang === 'ar' ? 'العودة للحجوزات' : 'Back to Bookings'}
+          </Button>
+        </Link>
+      </div>
+    );
+  }
+
+  // Skipped — "Driver skipped you"
+  if (!loading && isSkipped) {
+    return (
+      <div className="h-screen bg-surface flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-20 h-20 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mb-6">
+          <AlertCircle className="w-10 h-10 text-amber-600" />
+        </div>
+        <h1 className="text-2xl font-bold text-foreground mb-2">
+          {lang === 'ar' ? 'تم تخطيك من قبل السائق' : 'Driver has skipped you'}
+        </h1>
+        <p className="text-muted-foreground mb-4 max-w-xs">
+          {lang === 'ar'
+            ? 'تجاوزت الوقت المسموح للوصول إلى السائق. يرجى الالتزام بالموعد في المرة القادمة.'
+            : 'You exceeded the allowed time to reach the driver. Please be on time next time.'}
+        </p>
+        {booking?.skip_refund_amount > 0 && (
+          <p className="text-sm text-primary font-medium mb-6">
+            {lang === 'ar'
+              ? `سيتم استرداد ${booking.skip_refund_amount} جنيه (50%)`
+              : `${booking.skip_refund_amount} EGP (50%) will be refunded`}
+          </p>
+        )}
+        <Link to="/my-bookings">
+          <Button size="lg">
+            {lang === 'ar' ? 'العودة للحجوزات' : 'Back to Bookings'}
+          </Button>
+        </Link>
+      </div>
+    );
+  }
+
+  // Boarded — "Have a safe ride"
+  if (!loading && isBoarded) {
+    return (
+      <div className="h-screen bg-surface flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-20 h-20 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-6">
+          <Car className="w-10 h-10 text-green-600" />
+        </div>
+        <h1 className="text-2xl font-bold text-foreground mb-2">
+          {lang === 'ar' ? 'رحلة آمنة! 🚐' : 'Have a safe ride! 🚐'}
+        </h1>
+        <p className="text-muted-foreground mb-4 max-w-xs">
+          {lang === 'ar'
+            ? 'أنت الآن في الشاتل. استرخِ واستمتع بالرحلة.'
+            : "You're on the shuttle now. Sit back and enjoy the ride."}
+        </p>
+        <div className="bg-card border border-border rounded-xl p-4 w-full max-w-sm mb-6 space-y-2">
+          <div className="flex items-center gap-2 text-sm">
+            <MapPin className="w-4 h-4 text-green-600" />
+            <span className="text-muted-foreground truncate">{lang === 'ar' ? route?.origin_name_ar : route?.origin_name_en}</span>
+          </div>
+          <div className="flex items-center gap-2 text-sm">
+            <ArrowRight className="w-4 h-4 text-muted-foreground" />
+          </div>
+          <div className="flex items-center gap-2 text-sm">
+            <MapPin className="w-4 h-4 text-destructive" />
+            <span className="text-muted-foreground truncate">{lang === 'ar' ? route?.destination_name_ar : route?.destination_name_en}</span>
+          </div>
+        </div>
+        {(driver || driverApplication) && (
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <Users className="w-5 h-5 text-primary" />
+            </div>
+            <div className="text-start">
+              <p className="font-medium text-foreground text-sm">{driver?.full_name || (lang === 'ar' ? 'السائق' : 'Driver')}</p>
+              <p className="text-xs text-muted-foreground">{shuttle?.vehicle_model} · {shuttle?.vehicle_plate}</p>
+            </div>
+            {(driverApplication?.phone || driver?.phone) && (
+              <a href={`tel:${driverApplication?.phone || driver?.phone}`}>
+                <Button variant="outline" size="icon" className="rounded-full w-9 h-9">
+                  <Phone className="w-4 h-4" />
+                </Button>
+              </a>
+            )}
+          </div>
+        )}
+        <div className="flex gap-3">
+          <Button variant="outline" size="icon" onClick={() => setSosActive(true)} className="text-destructive">
+            <Shield className="w-4 h-4" />
+          </Button>
+          <Button variant="outline" onClick={() => setChatOpen(true)}>
+            <MessageCircle className="w-4 h-4 me-2" />
+            {lang === 'ar' ? 'محادثة' : 'Chat'}
+          </Button>
+        </div>
+
+        <RideChat
+          bookingId={bookingId || ''}
+          isOpen={chatOpen}
+          onClose={() => setChatOpen(false)}
+          otherName={driver?.full_name}
+        />
+
+        {sosActive && (
+          <div className="fixed inset-0 z-50 bg-background/80 flex items-center justify-center p-4">
+            <div className="bg-card border border-destructive rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+              <div className="text-center mb-5">
+                <Shield className="w-8 h-8 text-destructive mx-auto mb-3" />
+                <h3 className="text-lg font-bold text-foreground">{lang === 'ar' ? 'طوارئ SOS' : 'Emergency SOS'}</h3>
+              </div>
+              <div className="space-y-2">
+                <a href="tel:122" className="block"><Button variant="destructive" className="w-full" size="lg"><Phone className="w-5 h-5 me-2" />{lang === 'ar' ? 'الشرطة (122)' : 'Police (122)'}</Button></a>
+                <a href="tel:123" className="block"><Button variant="destructive" className="w-full" size="lg"><Phone className="w-5 h-5 me-2" />{lang === 'ar' ? 'الإسعاف (123)' : 'Ambulance (123)'}</Button></a>
+                <Button variant="ghost" className="w-full" onClick={() => setSosActive(false)}>{lang === 'ar' ? 'إلغاء' : 'Cancel'}</Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ===== NORMAL TRACKING VIEW (waiting / en route) =====
   return (
     <div className="h-screen bg-surface flex flex-col overflow-hidden">
-      {/* Header */}
       <header className="bg-card border-b border-border shrink-0 z-40 safe-area-top">
         <div className="container mx-auto flex items-center h-14 px-4 gap-3">
           <Link to="/my-bookings">
@@ -433,35 +515,12 @@ const TrackShuttle = () => {
             </span>
           )}
           <div className="ms-auto flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-destructive"
-              onClick={() => setSosActive(true)}
-              title="SOS"
-            >
+            <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setSosActive(true)}>
               <Shield className="w-4 h-4" />
-            </Button>
-            <Button variant="ghost" size="icon" onClick={() => {
-              const url = `${window.location.origin}/track?booking=${bookingId}`;
-              if (navigator.share) {
-                navigator.share({
-                  title: lang === 'ar' ? 'تتبع رحلتي' : 'Track My Ride',
-                  text: lang === 'ar' ? 'تتبع رحلتي المباشرة على مسار' : 'Track my live ride on Massar',
-                  url,
-                });
-              } else {
-                navigator.clipboard.writeText(url);
-                toast({ title: lang === 'ar' ? 'تم نسخ الرابط' : 'Link copied!' });
-              }
-            }}>
-              <Share2 className="w-4 h-4" />
             </Button>
             {(driverApplication?.phone || driver?.phone) && (
               <a href={`tel:${driverApplication?.phone || driver?.phone}`}>
-                <Button variant="ghost" size="icon" title={lang === 'ar' ? 'اتصل بالسائق' : 'Call Driver'}>
-                  <Phone className="w-4 h-4" />
-                </Button>
+                <Button variant="ghost" size="icon"><Phone className="w-4 h-4" /></Button>
               </a>
             )}
             <Button variant="ghost" size="icon" onClick={() => setChatOpen(true)}>
@@ -474,14 +533,12 @@ const TrackShuttle = () => {
         </div>
       </header>
 
-
-
       <div className="relative" style={{ height: '45vh', minHeight: '280px' }}>
         {!hasLiveGps && !loading ? (
           <div className="h-full bg-muted flex flex-col items-center justify-center text-center p-6">
             <Car className="w-16 h-16 text-muted-foreground/40 mb-4" />
             <h3 className="text-lg font-semibold text-foreground mb-1">
-              {lang === 'ar' ? 'الرحلة لم تبدأ بعد' : 'Ride hasn\'t started yet'}
+              {lang === 'ar' ? 'الرحلة لم تبدأ بعد' : "Ride hasn't started yet"}
             </h3>
             <p className="text-sm text-muted-foreground max-w-xs">
               {lang === 'ar'
@@ -502,7 +559,6 @@ const TrackShuttle = () => {
             showUserLocation={false}
           />
         )}
-
         {loading && (
           <div className="absolute inset-0 bg-background/50 flex items-center justify-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
@@ -510,30 +566,25 @@ const TrackShuttle = () => {
         )}
       </div>
 
-      {/* Stop-based location status */}
-      {driverStopStatus && !isBoarded && (
+      {/* Stop status */}
+      {driverStopStatus && (
         <div className="bg-accent px-5 py-2.5 flex items-center gap-2">
           <MapPin className="w-4 h-4 text-accent-foreground" />
           <p className="text-accent-foreground text-sm font-medium">
             {driverStopStatus.atStopId
-              ? (lang === 'ar'
-                ? `📍 السائق عند: ${driverStopStatus.atStopNameAr}`
-                : `📍 Driver at: ${driverStopStatus.atStopNameEn}`)
+              ? (lang === 'ar' ? `📍 السائق عند: ${driverStopStatus.atStopNameAr}` : `📍 Driver at: ${driverStopStatus.atStopNameEn}`)
               : driverStopStatus.headingToStopId
-                ? (lang === 'ar'
-                  ? `🚐 متجه إلى: ${driverStopStatus.headingToStopNameAr}`
-                  : `🚐 Heading to: ${driverStopStatus.headingToStopNameEn}`)
+                ? (lang === 'ar' ? `🚐 متجه إلى: ${driverStopStatus.headingToStopNameAr}` : `🚐 Heading to: ${driverStopStatus.headingToStopNameEn}`)
                 : ''}
           </p>
         </div>
       )}
 
-      {/* Card below map — full width, scrollable */}
       {booking && !loading && (
         <div className="flex-1 overflow-y-auto">
           <div className="bg-card border-t border-border w-full">
-            {/* ETA Banner — only show after ride has started */}
-            {etaMinutes !== null && !isBoarded && hasLiveGps && (
+            {/* ETA Banner */}
+            {etaMinutes !== null && hasLiveGps && (
               <div className="bg-primary px-5 py-3 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Navigation className="w-5 h-5 text-primary-foreground" />
@@ -555,39 +606,22 @@ const TrackShuttle = () => {
                 {stopsBeforeYou > 0 && (
                   <div className="bg-primary-foreground/20 rounded-lg px-3 py-1.5 text-center">
                     <p className="text-primary-foreground font-bold text-sm">{stopsBeforeYou}</p>
-                    <p className="text-primary-foreground/80 text-[10px] leading-tight">
-                      {lang === 'ar' ? 'توقفات قبلك' : 'stops before you'}
-                    </p>
+                    <p className="text-primary-foreground/80 text-[10px]">{lang === 'ar' ? 'توقفات قبلك' : 'stops before you'}</p>
                   </div>
                 )}
               </div>
             )}
 
-            {isBoarded && (
-              <div className="bg-green-600 px-5 py-3 flex items-center gap-2">
-                <Car className="w-5 h-5 text-white" />
-                <p className="text-white font-semibold">
-                  {lang === 'ar' ? 'أنت في الشاتل الآن! استمتع بالرحلة' : "You're on board! Enjoy your ride"}
-                </p>
-              </div>
-            )}
-
             <div className="p-4 space-y-3">
-              {/* Route info */}
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-foreground text-sm">
-                  {lang === 'ar' ? route?.name_ar : route?.name_en}
-                </h3>
+                <h3 className="font-semibold text-foreground text-sm">{lang === 'ar' ? route?.name_ar : route?.name_en}</h3>
                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                   shuttle?.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-muted text-muted-foreground'
                 }`}>
-                  {shuttle?.status === 'active'
-                    ? (lang === 'ar' ? 'في الطريق' : 'On the way')
-                    : (lang === 'ar' ? 'في الانتظار' : 'Waiting')}
+                  {shuttle?.status === 'active' ? (lang === 'ar' ? 'في الطريق' : 'On the way') : (lang === 'ar' ? 'في الانتظار' : 'Waiting')}
                 </span>
               </div>
 
-              {/* Route endpoints */}
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <MapPin className="w-3 h-3 text-green-600 shrink-0" />
                 <span className="truncate">{lang === 'ar' ? route?.origin_name_ar : route?.origin_name_en}</span>
@@ -610,26 +644,15 @@ const TrackShuttle = () => {
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-foreground text-sm truncate">{driver?.full_name || (lang === 'ar' ? 'السائق' : 'Driver')}</p>
                       <p className="text-xs text-muted-foreground">
-                        {driverApplication?.vehicle_model || shuttle?.vehicle_model}
-                        {driverApplication?.vehicle_year ? ` (${driverApplication.vehicle_year})` : ''}
-                        {' · '}
-                        {shuttle?.vehicle_plate}
+                        {driverApplication?.vehicle_model || shuttle?.vehicle_model} · {shuttle?.vehicle_plate}
                       </p>
                     </div>
                     {(driverApplication?.phone || driver?.phone) && (
                       <a href={`tel:${driverApplication?.phone || driver?.phone}`}>
-                        <Button variant="outline" size="icon" className="rounded-full w-9 h-9">
-                          <Phone className="w-4 h-4" />
-                        </Button>
+                        <Button variant="outline" size="icon" className="rounded-full w-9 h-9"><Phone className="w-4 h-4" /></Button>
                       </a>
                     )}
                   </div>
-                  {driverApplication?.license_number && (
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground ps-[52px]">
-                      <Shield className="w-3 h-3" />
-                      <span>{lang === 'ar' ? 'رخصة:' : 'License:'} {driverApplication.license_number}</span>
-                    </div>
-                  )}
                   {driverRating && (
                     <div className="flex items-center gap-2 text-xs text-muted-foreground ps-[52px]">
                       <Star className="w-3 h-3 fill-secondary text-secondary" />
@@ -640,7 +663,7 @@ const TrackShuttle = () => {
               )}
 
               {/* Boarding code */}
-              {booking.boarding_code && !isBoarded && (
+              {booking.boarding_code && (
                 <div className="bg-surface rounded-xl p-3 flex items-center gap-3">
                   <Key className="w-5 h-5 text-primary" />
                   <div>
@@ -654,153 +677,11 @@ const TrackShuttle = () => {
                 </div>
               )}
 
-              {/* Schedule */}
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Clock className="w-3 h-3" />
                 <span>{booking.scheduled_date} · {booking.scheduled_time}</span>
                 <span className="ms-auto font-semibold text-primary">{booking.total_price} EGP</span>
               </div>
-
-              {/* Live Stop Timeline */}
-              {passengerStops.length > 0 && (
-                <div className="border-t border-border pt-3">
-                  <p className="text-xs font-semibold text-foreground mb-3 flex items-center gap-1.5">
-                    <Navigation className="w-3.5 h-3.5 text-primary" />
-                    {lang === 'ar' ? 'مسار الرحلة المباشر' : 'Live Route Progress'}
-                  </p>
-                  <div className="relative">
-                    {/* Vertical line */}
-                    <div className="absolute start-[11px] top-3 bottom-3 w-0.5 bg-border" />
-                    
-                    {/* Route Origin */}
-                    <div className="flex items-center gap-3 mb-1 relative">
-                      <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center z-10 shrink-0">
-                        <MapPin className="w-3 h-3 text-white" />
-                      </div>
-                      <span className="text-xs text-muted-foreground truncate">
-                        {lang === 'ar' ? route?.origin_name_ar : route?.origin_name_en}
-                      </span>
-                    </div>
-
-                    {/* Passenger stops */}
-                    {passengerStops.filter(s => s.type === 'pickup').map((stop, i) => {
-                      const isBoarded = stop.status === 'boarded';
-                      const isSkipped = stop.status === 'cancelled';
-                      const isMe = stop.isCurrentUser;
-                      
-                      const shuttleLoc = shuttle?.current_lat && shuttle?.current_lng
-                        ? { lat: shuttle.current_lat, lng: shuttle.current_lng }
-                        : null;
-                      
-                      const routeOrigin = { lat: route?.origin_lat || 0, lng: route?.origin_lng || 0 };
-                      const routeDest = { lat: route?.destination_lat || 0, lng: route?.destination_lng || 0 };
-                      const calcProg = (lat: number, lng: number) => {
-                        const dx = lat - routeOrigin.lat;
-                        const dy = lng - routeOrigin.lng;
-                        const rx = routeDest.lat - routeOrigin.lat;
-                        const ry = routeDest.lng - routeOrigin.lng;
-                        const len2 = rx * rx + ry * ry;
-                        return len2 === 0 ? 0 : (dx * rx + dy * ry) / len2;
-                      };
-                      
-                      const driverProgress = shuttleLoc ? calcProg(shuttleLoc.lat, shuttleLoc.lng) : -1;
-                      const isPassed = isBoarded || (driverProgress > stop.orderIndex && driverProgress >= 0);
-                      const isCurrent = !isPassed && !isSkipped && (
-                        i === 0 || passengerStops.filter(s => s.type === 'pickup').slice(0, i).every(
-                          prev => prev.status === 'boarded' || prev.status === 'cancelled'
-                        )
-                      );
-
-                      return (
-                        <div key={`${stop.userId}-${stop.type}-${i}`} className="flex items-center gap-3 py-1.5 relative">
-                          <div className={`w-6 h-6 rounded-full flex items-center justify-center z-10 shrink-0 transition-all ${
-                            isPassed ? 'bg-green-500' :
-                            isSkipped ? 'bg-muted line-through' :
-                            isCurrent ? 'bg-primary ring-4 ring-primary/20 animate-pulse' :
-                            'bg-muted-foreground/20'
-                          }`}>
-                            {isPassed ? (
-                              <CheckCircle2 className="w-3.5 h-3.5 text-white" />
-                            ) : isCurrent ? (
-                              <span className="text-[10px] font-bold text-primary-foreground">📍</span>
-                            ) : (
-                              <span className="text-[10px] font-bold text-muted-foreground">{i + 1}</span>
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className={`text-xs font-medium truncate ${
-                              isMe ? 'text-primary font-bold' : 
-                              isPassed ? 'text-muted-foreground' : 'text-foreground'
-                            }`}>
-                              {isMe ? (lang === 'ar' ? '⭐ أنت' : '⭐ You') : stop.name}
-                            </p>
-                            {isMe && stop.boardingCode && !booking?.boarded_at && (
-                              <p className="text-[10px] text-muted-foreground font-mono">
-                                {lang === 'ar' ? 'رمز:' : 'Code:'} {stop.boardingCode}
-                              </p>
-                            )}
-                          </div>
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0 ${
-                            isPassed ? 'bg-green-100 text-green-700' :
-                            isSkipped ? 'bg-destructive/10 text-destructive' :
-                            isCurrent ? 'bg-primary/10 text-primary' :
-                            'bg-muted text-muted-foreground'
-                          }`}>
-                            {isPassed ? (lang === 'ar' ? 'صعد ✓' : 'Boarded ✓') :
-                             isSkipped ? (lang === 'ar' ? 'تخطي' : 'Skipped') :
-                             isCurrent ? (lang === 'ar' ? 'التالي' : 'Next') :
-                             (lang === 'ar' ? 'في الانتظار' : 'Waiting')}
-                          </span>
-                        </div>
-                      );
-                    })}
-
-                    {/* Dropoff stops */}
-                    {passengerStops.filter(s => s.type === 'dropoff').length > 0 && (
-                      <div className="my-1.5 ms-9 text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
-                        {lang === 'ar' ? '— نزول —' : '— Drop-offs —'}
-                      </div>
-                    )}
-                    {passengerStops.filter(s => s.type === 'dropoff').map((stop, i) => {
-                      const isCompleted = stop.status === 'completed';
-                      const isMe = stop.isCurrentUser;
-                      return (
-                        <div key={`${stop.userId}-dropoff-${i}`} className="flex items-center gap-3 py-1.5 relative">
-                          <div className={`w-6 h-6 rounded-full flex items-center justify-center z-10 shrink-0 ${
-                            isCompleted ? 'bg-green-500' : 'bg-purple-200 dark:bg-purple-900'
-                          }`}>
-                            {isCompleted ? (
-                              <CheckCircle2 className="w-3.5 h-3.5 text-white" />
-                            ) : (
-                              <span className="text-[10px]">🏁</span>
-                            )}
-                          </div>
-                          <p className={`text-xs flex-1 min-w-0 truncate ${
-                            isMe ? 'text-primary font-bold' : 'text-foreground'
-                          }`}>
-                            {isMe ? (lang === 'ar' ? '⭐ أنت — نزول' : '⭐ You — Drop-off') : `${stop.name} — ${lang === 'ar' ? 'نزول' : 'Drop-off'}`}
-                          </p>
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                            isCompleted ? 'bg-green-100 text-green-700' : 'bg-purple-50 text-purple-600 dark:bg-purple-900/50 dark:text-purple-300'
-                          }`}>
-                            {isCompleted ? (lang === 'ar' ? 'تم ✓' : 'Done ✓') : (lang === 'ar' ? 'قادم' : 'Upcoming')}
-                          </span>
-                        </div>
-                      );
-                    })}
-
-                    {/* Route Destination */}
-                    <div className="flex items-center gap-3 mt-1 relative">
-                      <div className="w-6 h-6 rounded-full bg-destructive flex items-center justify-center z-10 shrink-0">
-                        <MapPin className="w-3 h-3 text-white" />
-                      </div>
-                      <span className="text-xs text-muted-foreground truncate">
-                        {lang === 'ar' ? route?.destination_name_ar : route?.destination_name_en}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -811,61 +692,29 @@ const TrackShuttle = () => {
         bookingId={bookingId || ''}
         isOpen={chatOpen}
         onClose={() => setChatOpen(false)}
+        otherName={driver?.full_name}
       />
 
-      {/* SOS Emergency Dialog */}
+      {/* SOS */}
       {sosActive && (
         <div className="fixed inset-0 z-50 bg-background/80 flex items-center justify-center p-4">
           <div className="bg-card border border-destructive rounded-2xl p-6 max-w-sm w-full shadow-2xl">
             <div className="text-center mb-5">
-              <div className="w-16 h-16 rounded-full bg-destructive/10 mx-auto mb-3 flex items-center justify-center">
-                <Shield className="w-8 h-8 text-destructive" />
-              </div>
-              <h3 className="text-lg font-bold text-foreground mb-1">
-                {lang === 'ar' ? 'طوارئ SOS' : 'Emergency SOS'}
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                {lang === 'ar'
-                  ? 'اختر إجراء الطوارئ المناسب'
-                  : 'Choose the appropriate emergency action'}
-              </p>
+              <Shield className="w-8 h-8 text-destructive mx-auto mb-3" />
+              <h3 className="text-lg font-bold text-foreground">{lang === 'ar' ? 'طوارئ SOS' : 'Emergency SOS'}</h3>
             </div>
             <div className="space-y-2">
-              <a href="tel:122" className="block">
-                <Button variant="destructive" className="w-full" size="lg">
-                  <Phone className="w-5 h-5 me-2" />
-                  {lang === 'ar' ? 'اتصل بالشرطة (122)' : 'Call Police (122)'}
-                </Button>
-              </a>
-              <a href="tel:123" className="block">
-                <Button variant="destructive" className="w-full" size="lg">
-                  <Phone className="w-5 h-5 me-2" />
-                  {lang === 'ar' ? 'اتصل بالإسعاف (123)' : 'Call Ambulance (123)'}
-                </Button>
-              </a>
-              <Button
-                variant="outline"
-                className="w-full"
-                size="lg"
-                onClick={() => {
-                  const url = `${window.location.origin}/track?booking=${bookingId}`;
-                  const text = lang === 'ar'
-                    ? `أحتاج مساعدة! تتبع موقعي: ${url}`
-                    : `I need help! Track my location: ${url}`;
-                  if (navigator.share) {
-                    navigator.share({ title: 'SOS', text, url });
-                  } else {
-                    navigator.clipboard.writeText(text);
-                    toast({ title: lang === 'ar' ? 'تم نسخ الرابط' : 'Link copied!' });
-                  }
-                }}
-              >
-                <Share2 className="w-5 h-5 me-2" />
-                {lang === 'ar' ? 'شارك موقعك مع شخص' : 'Share location with someone'}
+              <a href="tel:122" className="block"><Button variant="destructive" className="w-full" size="lg"><Phone className="w-5 h-5 me-2" />{lang === 'ar' ? 'الشرطة (122)' : 'Police (122)'}</Button></a>
+              <a href="tel:123" className="block"><Button variant="destructive" className="w-full" size="lg"><Phone className="w-5 h-5 me-2" />{lang === 'ar' ? 'الإسعاف (123)' : 'Ambulance (123)'}</Button></a>
+              <Button variant="outline" className="w-full" size="lg" onClick={() => {
+                const url = `${window.location.origin}/track?booking=${bookingId}`;
+                const text = lang === 'ar' ? `أحتاج مساعدة! تتبع موقعي: ${url}` : `I need help! Track my location: ${url}`;
+                if (navigator.share) { navigator.share({ title: 'SOS', text, url }); }
+                else { navigator.clipboard.writeText(text); toast({ title: lang === 'ar' ? 'تم نسخ الرابط' : 'Link copied!' }); }
+              }}>
+                <Share2 className="w-5 h-5 me-2" />{lang === 'ar' ? 'شارك موقعك' : 'Share location'}
               </Button>
-              <Button variant="ghost" className="w-full" onClick={() => setSosActive(false)}>
-                {lang === 'ar' ? 'إلغاء' : 'Cancel'}
-              </Button>
+              <Button variant="ghost" className="w-full" onClick={() => setSosActive(false)}>{lang === 'ar' ? 'إلغاء' : 'Cancel'}</Button>
             </div>
           </div>
         </div>
@@ -873,6 +722,5 @@ const TrackShuttle = () => {
     </div>
   );
 };
-
 
 export default TrackShuttle;
