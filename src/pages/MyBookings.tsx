@@ -454,7 +454,7 @@ const MyBookings = () => {
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-primary">{booking.total_price} EGP</span>
                     <div className="flex items-center gap-2">
-                      {['confirmed', 'boarded'].includes(booking.status) && dp?.phone && (
+                      {['confirmed', 'boarded'].includes(booking.status) && !isExpired && dp?.phone && (
                         <a href={`tel:${dp.phone}`}>
                           <Button variant="outline" size="sm">
                             <Phone className="w-3.5 h-3.5 me-1" />
@@ -462,7 +462,7 @@ const MyBookings = () => {
                           </Button>
                         </a>
                       )}
-                      {['confirmed', 'boarded'].includes(booking.status) && (
+                      {['confirmed', 'boarded'].includes(booking.status) && !isExpired && (
                         <Button variant="outline" size="sm" className="relative" onClick={() => setChatBookingId(booking.id)}>
                           <MessageCircle className="w-3.5 h-3.5 me-1" />
                           {lang === 'ar' ? 'محادثة' : 'Chat'}
@@ -471,7 +471,7 @@ const MyBookings = () => {
                           )}
                         </Button>
                       )}
-                      {['confirmed', 'boarded'].includes(booking.status) && (
+                      {['confirmed', 'boarded'].includes(booking.status) && !isExpired && (
                         <Link to={`/track?booking=${booking.id}`}>
                           <Button variant="outline" size="sm">
                             <Navigation className="w-3.5 h-3.5 me-1" />
