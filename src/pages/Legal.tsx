@@ -109,17 +109,43 @@ const Legal = () => {
             <li><strong>Skipped by driver (no-show at pickup):</strong> 50% refund</li>
             <li>All refunds are credited to your in-app wallet and reviewed by our team</li>
           </ul>
-          <h3 className="text-base font-semibold text-foreground">6. User Conduct</h3>
+          <h3 className="text-base font-semibold text-foreground">6. Platform Commission</h3>
+          <p>{appName} charges a <strong>10% service fee</strong> on every completed ride. This fee is automatically calculated and deducted from the ride fare. For cash payments, drivers are responsible for remitting the platform's commission.</p>
+          <h3 className="text-base font-semibold text-foreground">7. Driver Financial Obligations</h3>
+          <ul className="list-disc list-inside space-y-1">
+            <li>Drivers must remit the platform's 10% commission for all cash-paid rides</li>
+            <li>Cash commissions must be settled <strong>by the end of each calendar month</strong> via InstaPay transfer</li>
+            <li>A detailed statement of owed amounts is available in the driver dashboard</li>
+            <li>Failure to settle outstanding amounts within <strong>15 days past the due date</strong> will result in:
+              <ul className="list-disc list-inside ms-4 mt-1 space-y-1">
+                <li>Immediate suspension of the driver account</li>
+                <li>A formal demand letter sent to the registered address</li>
+                <li>Referral to legal counsel for debt recovery under Egyptian Commercial Law</li>
+                <li>Filing of a civil lawsuit for recovery of owed amounts plus legal fees and interest</li>
+                <li>Reporting to relevant authorities if amounts constitute criminal breach of trust under Egyptian Penal Code (Article 341)</li>
+              </ul>
+            </li>
+          </ul>
+          <h3 className="text-base font-semibold text-foreground">8. Partner Program</h3>
+          <ul className="list-disc list-inside space-y-1">
+            <li>Companies and transport group operators may apply to become {appName} Partners</li>
+            <li>Partners receive a unique referral link to share with their existing clients and drivers</li>
+            <li>Partners earn a configurable percentage of each ride booked by their referred users</li>
+            <li>Partner commissions are calculated automatically and paid monthly</li>
+            <li>Partners can submit route requests for admin approval</li>
+            <li>Partner accounts may be suspended for violations of these terms or fraudulent referral activity</li>
+          </ul>
+          <h3 className="text-base font-semibold text-foreground">9. User Conduct</h3>
           <p>Users must not: use the service for illegal purposes, harass drivers or other passengers, provide false identity documents, attempt to manipulate the booking system, or interfere with the app's operation.</p>
-          <h3 className="text-base font-semibold text-foreground">7. Driver Requirements</h3>
+          <h3 className="text-base font-semibold text-foreground">10. Driver Requirements</h3>
           <p>Drivers must maintain valid licenses, vehicle registration, and insurance. Vehicles must pass safety inspections. {appName} reserves the right to deactivate driver accounts for safety violations.</p>
-          <h3 className="text-base font-semibold text-foreground">8. Limitation of Liability</h3>
+          <h3 className="text-base font-semibold text-foreground">11. Limitation of Liability</h3>
           <p>{appName} acts as a platform connecting riders and drivers. We are not a transportation company. While we verify drivers and vehicles, we are not liable for incidents during rides beyond what is required by applicable Egyptian law.</p>
-          <h3 className="text-base font-semibold text-foreground">9. Intellectual Property</h3>
+          <h3 className="text-base font-semibold text-foreground">12. Intellectual Property</h3>
           <p>All content, trademarks, and technology in {appName} are owned by or licensed to us. You may not copy, modify, or distribute any part of the app without written permission.</p>
-          <h3 className="text-base font-semibold text-foreground">10. Termination</h3>
+          <h3 className="text-base font-semibold text-foreground">13. Termination</h3>
           <p>We may suspend or terminate your account for violations of these terms. You may delete your account at any time through the app.</p>
-          <h3 className="text-base font-semibold text-foreground">11. Governing Law</h3>
+          <h3 className="text-base font-semibold text-foreground">14. Governing Law</h3>
           <p>These terms are governed by the laws of the Arab Republic of Egypt. Disputes shall be resolved in Egyptian courts.</p>
         </div>
       ),
@@ -146,17 +172,43 @@ const Legal = () => {
             <li><strong>تم تخطيك من السائق (عدم الحضور):</strong> استرداد 50%</li>
             <li>جميع المبالغ المستردة تُضاف إلى محفظتك داخل التطبيق ويتم مراجعتها من فريقنا</li>
           </ul>
-          <h3 className="text-base font-semibold text-foreground">5. سلوك المستخدم</h3>
+          <h3 className="text-base font-semibold text-foreground">6. عمولة المنصة</h3>
+          <p>تفرض {appName} <strong>رسوم خدمة 10%</strong> على كل رحلة مكتملة. يتم احتساب هذه الرسوم تلقائيًا وخصمها من أجرة الرحلة. بالنسبة للمدفوعات النقدية، يتحمل السائق مسؤولية تحويل عمولة المنصة.</p>
+          <h3 className="text-base font-semibold text-foreground">7. الالتزامات المالية للسائق</h3>
+          <ul className="list-disc list-inside space-y-1">
+            <li>يجب على السائقين تحويل عمولة المنصة (10%) عن جميع الرحلات النقدية</li>
+            <li>يجب تسوية العمولات النقدية <strong>بحلول نهاية كل شهر ميلادي</strong> عبر تحويل InstaPay</li>
+            <li>كشف تفصيلي بالمبالغ المستحقة متاح في لوحة تحكم السائق</li>
+            <li>عدم التسوية خلال <strong>15 يومًا بعد تاريخ الاستحقاق</strong> سيؤدي إلى:
+              <ul className="list-disc list-inside ms-4 mt-1 space-y-1">
+                <li>تعليق فوري لحساب السائق</li>
+                <li>إرسال إنذار رسمي للعنوان المسجل</li>
+                <li>إحالة للمستشار القانوني لاسترداد الديون بموجب القانون التجاري المصري</li>
+                <li>رفع دعوى مدنية لاسترداد المبالغ المستحقة بالإضافة إلى الرسوم القانونية والفوائد</li>
+                <li>الإبلاغ للجهات المختصة إذا كانت المبالغ تشكل جريمة خيانة أمانة بموجب قانون العقوبات المصري (المادة 341)</li>
+              </ul>
+            </li>
+          </ul>
+          <h3 className="text-base font-semibold text-foreground">8. برنامج الشراكة</h3>
+          <ul className="list-disc list-inside space-y-1">
+            <li>يمكن للشركات ومشغلي مجموعات النقل التقدم ليصبحوا شركاء {appName}</li>
+            <li>يحصل الشركاء على رابط إحالة فريد لمشاركته مع عملائهم وسائقيهم الحاليين</li>
+            <li>يكسب الشركاء نسبة قابلة للتخصيص من كل رحلة يحجزها مستخدموهم المُحالون</li>
+            <li>يتم احتساب عمولات الشركاء تلقائيًا ودفعها شهريًا</li>
+            <li>يمكن للشركاء تقديم طلبات مسارات للموافقة عليها من الإدارة</li>
+            <li>قد يتم تعليق حسابات الشركاء لمخالفة هذه الشروط أو نشاط إحالة احتيالي</li>
+          </ul>
+          <h3 className="text-base font-semibold text-foreground">9. سلوك المستخدم</h3>
           <p>يجب على المستخدمين عدم: استخدام الخدمة لأغراض غير قانونية، مضايقة السائقين أو الركاب الآخرين، تقديم وثائق هوية مزورة، أو التلاعب بنظام الحجز.</p>
-          <h3 className="text-base font-semibold text-foreground">6. متطلبات السائق</h3>
+          <h3 className="text-base font-semibold text-foreground">10. متطلبات السائق</h3>
           <p>يجب على السائقين الحفاظ على رخص قيادة سارية وتسجيل المركبة والتأمين. يجب أن تجتاز المركبات فحوصات السلامة.</p>
-          <h3 className="text-base font-semibold text-foreground">7. حدود المسؤولية</h3>
-          <p>{appName} يعمل كمنصة تربط الركاب بالسائقين. نحن لسنا شركة نقل. بينما نتحقق من السائقين والمركبات، لسنا مسؤولين عن الحوادث أثناء الرحلات بما يتجاوز ما يتطلبه القانون المصري المعمول به.</p>
-          <h3 className="text-base font-semibold text-foreground">8. الملكية الفكرية</h3>
+          <h3 className="text-base font-semibold text-foreground">11. حدود المسؤولية</h3>
+          <p>{appName} يعمل كمنصة تربط الركاب بالسائقين. نحن لسنا شركة نقل.</p>
+          <h3 className="text-base font-semibold text-foreground">12. الملكية الفكرية</h3>
           <p>جميع المحتويات والعلامات التجارية والتكنولوجيا في {appName} مملوكة لنا أو مرخصة لنا.</p>
-          <h3 className="text-base font-semibold text-foreground">9. الإنهاء</h3>
+          <h3 className="text-base font-semibold text-foreground">13. الإنهاء</h3>
           <p>يمكننا تعليق أو إنهاء حسابك لمخالفات هذه الشروط. يمكنك حذف حسابك في أي وقت من خلال التطبيق.</p>
-          <h3 className="text-base font-semibold text-foreground">10. القانون الحاكم</h3>
+          <h3 className="text-base font-semibold text-foreground">14. القانون الحاكم</h3>
           <p>تخضع هذه الشروط لقوانين جمهورية مصر العربية.</p>
         </div>
       ),

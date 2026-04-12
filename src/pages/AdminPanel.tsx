@@ -14,11 +14,12 @@ import PlacesAutocomplete from '@/components/PlacesAutocomplete';
 import {
   ChevronLeft, Route, Users, Car, Ticket, BarChart3, Plus, Edit, Trash2,
   CheckCircle2, XCircle, MapPin, Clock, Search, Globe, LogOut, Shield,
-  Loader2, Eye, Database, Settings, Phone, Package, ListOrdered, RotateCcw
+  Loader2, Eye, Database, Settings, Phone, Package, ListOrdered, RotateCcw,
+  Building2, DollarSign, Link2
 } from 'lucide-react';
 import PackagePricing from '@/components/admin/PackagePricing';
 
-type AdminTab = 'routes' | 'drivers' | 'shuttles' | 'bookings' | 'analytics' | 'approvals' | 'settings' | 'carpool' | 'users' | 'route_requests' | 'packages' | 'content' | 'refunds';
+type AdminTab = 'routes' | 'drivers' | 'shuttles' | 'bookings' | 'analytics' | 'approvals' | 'settings' | 'carpool' | 'users' | 'route_requests' | 'packages' | 'content' | 'refunds' | 'earnings' | 'partners' | 'partner_routes';
 
 const AdminPanel = () => {
   const { user, signOut } = useAuth();
@@ -73,6 +74,12 @@ const AdminPanel = () => {
   const [refunds, setRefunds] = useState<any[]>([]);
   const [refundProfiles, setRefundProfiles] = useState<Record<string, any>>({});
   const [processingRefund, setProcessingRefund] = useState<string | null>(null);
+
+  // Partner/Earnings management
+  const [partnerCompanies, setPartnerCompanies] = useState<any[]>([]);
+  const [platformEarnings, setPlatformEarnings] = useState<any[]>([]);
+  const [partnerRouteRequests, setPartnerRouteRequests] = useState<any[]>([]);
+  const [partnerProfiles, setPartnerProfiles] = useState<Record<string, any>>({});
 
   // User filters
   const [userTypeFilter, setUserTypeFilter] = useState('all');
@@ -194,6 +201,23 @@ const AdminPanel = () => {
       const rpMap: Record<string, any> = {};
       (profilesRes.data || []).filter((p: any) => refundUserIds.includes(p.user_id)).forEach((p: any) => { rpMap[p.user_id] = p; });
       setRefundProfiles(rpMap);
+    }
+
+    // Fetch partner data
+    const [{ data: partners }, { data: pEarnings }, { data: pRouteReqs }] = await Promise.all([
+      supabase.from('partner_companies').select('*').order('created_at', { ascending: false }),
+      supabase.from('platform_earnings').select('*').order('created_at', { ascending: false }).limit(200),
+      supabase.from('partner_route_requests').select('*').order('created_at', { ascending: false }),
+    ]);
+    setPartnerCompanies(partners || []);
+    setPlatformEarnings(pEarnings || []);
+    setPartnerRouteRequests(pRouteReqs || []);
+    // Fetch profiles for partners
+    const partnerUserIds = [...new Set((partners || []).map((p: any) => p.user_id))];
+    if (partnerUserIds.length > 0) {
+      const ppMap: Record<string, any> = {};
+      (profilesRes.data || []).filter((p: any) => partnerUserIds.includes(p.user_id)).forEach((p: any) => { ppMap[p.user_id] = p; });
+      setPartnerProfiles(ppMap);
     }
 
     setLoading(false);
@@ -565,6 +589,9 @@ const AdminPanel = () => {
     { key: 'shuttles', icon: Car, label: lang === 'ar' ? 'الشاتلات' : 'Shuttles' },
     { key: 'bookings', icon: Ticket, label: lang === 'ar' ? 'الحجوزات' : 'Bookings' },
     { key: 'refunds', icon: RotateCcw, label: lang === 'ar' ? 'المبالغ المستردة' : 'Refunds' },
+    { key: 'earnings', icon: DollarSign, label: lang === 'ar' ? 'الإيرادات' : 'Earnings' },
+    { key: 'partners', icon: Building2, label: lang === 'ar' ? 'الشركاء' : 'Partners' },
+    { key: 'partner_routes', icon: Link2, label: lang === 'ar' ? 'مسارات الشركاء' : 'Partner Routes' },
     { key: 'users', icon: Users, label: lang === 'ar' ? 'المستخدمين' : 'Users' },
     { key: 'route_requests', icon: MapPin, label: lang === 'ar' ? 'طلبات المسارات' : 'Route Requests' },
     { key: 'content', icon: Globe, label: lang === 'ar' ? 'المحتوى' : 'Content' },
@@ -1899,6 +1926,202 @@ const AdminPanel = () => {
                           </button>
                         </div>
                       )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Platform Earnings Tab */}
+        {tab === 'earnings' && (
+          <div className="space-y-6">
+            <h2 className="text-xl font-bold text-foreground">{lang === 'ar' ? 'إيرادات المنصة' : 'Platform Earnings'}</h2>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-card border border-border rounded-xl p-5">
+                <DollarSign className="w-5 h-5 text-green-500 mb-2" />
+                <p className="text-2xl font-bold text-foreground">{platformEarnings.reduce((s, e) => s + Number(e.amount), 0).toFixed(0)}</p>
+                <p className="text-xs text-muted-foreground">{lang === 'ar' ? 'إجمالي العمولات' : 'Total Commission'}</p>
+              </div>
+              <div className="bg-card border border-border rounded-xl p-5">
+                <DollarSign className="w-5 h-5 text-amber-500 mb-2" />
+                <p className="text-2xl font-bold text-foreground">{platformEarnings.filter(e => e.payment_method === 'cash' && e.driver_payment_status === 'pending').reduce((s, e) => s + Number(e.amount), 0).toFixed(0)}</p>
+                <p className="text-xs text-muted-foreground">{lang === 'ar' ? 'مستحق من السائقين (نقدي)' : 'Owed by Drivers (Cash)'}</p>
+              </div>
+              <div className="bg-card border border-border rounded-xl p-5">
+                <CheckCircle2 className="w-5 h-5 text-green-500 mb-2" />
+                <p className="text-2xl font-bold text-foreground">{platformEarnings.filter(e => e.driver_payment_status === 'paid').reduce((s, e) => s + Number(e.amount), 0).toFixed(0)}</p>
+                <p className="text-xs text-muted-foreground">{lang === 'ar' ? 'تم التحصيل' : 'Collected'}</p>
+              </div>
+              <div className="bg-card border border-border rounded-xl p-5">
+                <BarChart3 className="w-5 h-5 text-primary mb-2" />
+                <p className="text-2xl font-bold text-foreground">{platformEarnings.length}</p>
+                <p className="text-xs text-muted-foreground">{lang === 'ar' ? 'إجمالي المعاملات' : 'Total Transactions'}</p>
+              </div>
+            </div>
+            {platformEarnings.length > 0 && (
+              <div className="space-y-2">
+                {platformEarnings.slice(0, 50).map(e => (
+                  <div key={e.id} className="bg-card border border-border rounded-xl p-4 flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{Number(e.amount).toFixed(2)} EGP</p>
+                      <p className="text-xs text-muted-foreground">{e.payment_method} • {new Date(e.created_at).toLocaleDateString()}</p>
+                    </div>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${e.driver_payment_status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                      {e.driver_payment_status === 'paid' ? (lang === 'ar' ? 'مدفوع' : 'Paid') : (lang === 'ar' ? 'معلق' : 'Pending')}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Partners Tab */}
+        {tab === 'partners' && (
+          <div className="space-y-6">
+            <h2 className="text-xl font-bold text-foreground">{lang === 'ar' ? 'الشركاء' : 'Partners'}</h2>
+            {partnerCompanies.length === 0 ? (
+              <p className="text-muted-foreground">{lang === 'ar' ? 'لا يوجد شركاء بعد' : 'No partners yet'}</p>
+            ) : (
+              <div className="space-y-3">
+                {partnerCompanies.map(p => {
+                  const profile = partnerProfiles[p.user_id];
+                  return (
+                    <div key={p.id} className="bg-card border border-border rounded-xl p-5 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-bold text-foreground">{p.name}</p>
+                          <p className="text-xs text-muted-foreground">{profile?.full_name || 'Unknown'} • {p.contact_phone}</p>
+                          <p className="text-xs text-muted-foreground">{lang === 'ar' ? 'كود' : 'Code'}: {p.referral_code} • {lang === 'ar' ? 'النسبة' : 'Commission'}: {p.commission_percentage}%</p>
+                          {p.bank_details && <p className="text-xs text-muted-foreground">{lang === 'ar' ? 'الحساب' : 'Bank'}: {p.bank_details}</p>}
+                        </div>
+                        <span className={`text-xs px-2.5 py-1 rounded-full ${
+                          p.status === 'approved' ? 'bg-green-100 text-green-700' :
+                          p.status === 'rejected' ? 'bg-destructive/10 text-destructive' :
+                          p.status === 'suspended' ? 'bg-destructive/10 text-destructive' :
+                          'bg-amber-100 text-amber-700'
+                        }`}>{p.status}</span>
+                      </div>
+                      {/* Commission adjustment */}
+                      <div className="flex items-center gap-2">
+                        <Label className="text-xs shrink-0">{lang === 'ar' ? 'النسبة %' : 'Commission %'}</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={50}
+                          className="w-20 text-sm"
+                          defaultValue={p.commission_percentage}
+                          onBlur={async (e) => {
+                            const val = Number(e.target.value);
+                            if (val >= 0 && val <= 50) {
+                              await supabase.from('partner_companies').update({ commission_percentage: val }).eq('id', p.id);
+                              toast.success(lang === 'ar' ? 'تم تحديث النسبة' : 'Commission updated');
+                              fetchAllData();
+                            }
+                          }}
+                        />
+                      </div>
+                      {p.status === 'pending' && (
+                        <div className="flex gap-2">
+                          <button
+                            onClick={async () => {
+                              await supabase.from('partner_companies').update({ status: 'approved' }).eq('id', p.id);
+                              toast.success(lang === 'ar' ? 'تم قبول الشريك' : 'Partner approved');
+                              fetchAllData();
+                            }}
+                            className="flex-1 px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700"
+                          >{lang === 'ar' ? 'قبول' : 'Approve'}</button>
+                          <button
+                            onClick={async () => {
+                              await supabase.from('partner_companies').update({ status: 'rejected' }).eq('id', p.id);
+                              toast.success(lang === 'ar' ? 'تم رفض الشريك' : 'Partner rejected');
+                              fetchAllData();
+                            }}
+                            className="flex-1 px-3 py-2 bg-destructive text-white rounded-lg text-sm font-medium hover:bg-destructive/90"
+                          >{lang === 'ar' ? 'رفض' : 'Reject'}</button>
+                        </div>
+                      )}
+                      {p.status === 'approved' && (
+                        <button
+                          onClick={async () => {
+                            await supabase.from('partner_companies').update({ status: 'suspended' }).eq('id', p.id);
+                            toast.success(lang === 'ar' ? 'تم تعليق الشريك' : 'Partner suspended');
+                            fetchAllData();
+                          }}
+                          className="w-full px-3 py-2 bg-destructive/10 text-destructive rounded-lg text-sm font-medium hover:bg-destructive/20"
+                        >{lang === 'ar' ? 'تعليق' : 'Suspend'}</button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Partner Routes Tab */}
+        {tab === 'partner_routes' && (
+          <div className="space-y-6">
+            <h2 className="text-xl font-bold text-foreground">{lang === 'ar' ? 'مسارات الشركاء' : 'Partner Route Requests'}</h2>
+            {partnerRouteRequests.length === 0 ? (
+              <p className="text-muted-foreground">{lang === 'ar' ? 'لا توجد طلبات مسارات من الشركاء' : 'No partner route requests yet'}</p>
+            ) : (
+              <div className="space-y-3">
+                {partnerRouteRequests.map(r => {
+                  const partner = partnerCompanies.find((p: any) => p.id === r.partner_id);
+                  const stops = Array.isArray(r.stops_json) ? r.stops_json : [];
+                  return (
+                    <div key={r.id} className="bg-card border border-border rounded-xl p-5 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-bold text-foreground">{r.name_en}</p>
+                          {r.name_ar && <p className="text-sm text-muted-foreground">{r.name_ar}</p>}
+                          <p className="text-xs text-muted-foreground">{lang === 'ar' ? 'من' : 'By'}: {partner?.name || 'Unknown'}</p>
+                        </div>
+                        <span className={`text-xs px-2.5 py-1 rounded-full ${
+                          r.status === 'approved' ? 'bg-green-100 text-green-700' :
+                          r.status === 'rejected' ? 'bg-destructive/10 text-destructive' :
+                          'bg-amber-100 text-amber-700'
+                        }`}>{r.status}</span>
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        <p>{r.origin_name} → {r.destination_name}</p>
+                        <p>{r.price} EGP • {r.estimated_duration_minutes} min</p>
+                      </div>
+                      {stops.length > 0 && (
+                        <div className="space-y-1">
+                          <p className="text-xs font-medium text-foreground">{lang === 'ar' ? 'نقاط التوقف' : 'Stops'}:</p>
+                          {stops.map((s: any, i: number) => (
+                            <p key={i} className="text-xs text-muted-foreground flex items-center gap-1">
+                              <MapPin className="w-3 h-3" /> {s.name}
+                            </p>
+                          ))}
+                        </div>
+                      )}
+                      {r.status === 'pending' && (
+                        <div className="flex gap-2">
+                          <button
+                            onClick={async () => {
+                              await supabase.from('partner_route_requests').update({ status: 'approved' }).eq('id', r.id);
+                              toast.success(lang === 'ar' ? 'تم قبول المسار' : 'Route approved');
+                              fetchAllData();
+                            }}
+                            className="flex-1 px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700"
+                          >{lang === 'ar' ? 'قبول' : 'Approve'}</button>
+                          <button
+                            onClick={async () => {
+                              const notes = prompt(lang === 'ar' ? 'ملاحظات الرفض (اختياري)' : 'Rejection notes (optional)');
+                              await supabase.from('partner_route_requests').update({ status: 'rejected', admin_notes: notes || null }).eq('id', r.id);
+                              toast.success(lang === 'ar' ? 'تم رفض المسار' : 'Route rejected');
+                              fetchAllData();
+                            }}
+                            className="flex-1 px-3 py-2 bg-destructive text-white rounded-lg text-sm font-medium hover:bg-destructive/90"
+                          >{lang === 'ar' ? 'رفض' : 'Reject'}</button>
+                        </div>
+                      )}
+                      {r.admin_notes && <p className="text-xs text-amber-600">{lang === 'ar' ? 'ملاحظات' : 'Notes'}: {r.admin_notes}</p>}
                     </div>
                   );
                 })}

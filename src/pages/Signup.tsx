@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useRef, useEffect } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -86,6 +86,7 @@ const Signup = () => {
   const { t, lang, appName } = useLanguage();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
   const [role, setRole] = useState<UserRole | null>(null);
   const [driverStep, setDriverStep] = useState(1);
   const [fullName, setFullName] = useState('');
@@ -94,6 +95,8 @@ const Signup = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const referralCode = searchParams.get('ref') || '';
 
   // Driver photos
   const [facePhoto, setFacePhoto] = useState<UploadedFile | null>(null);
@@ -125,6 +128,10 @@ const Signup = () => {
 
   const handleRiderSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!acceptedTerms) {
+      toast({ title: lang === 'ar' ? 'يجب الموافقة على الشروط والأحكام' : 'You must accept the Terms & Conditions', variant: 'destructive' });
+      return;
+    }
     if (password.length < 6) {
       toast({ title: t('auth.error'), description: t('auth.passwordMin'), variant: 'destructive' });
       return;
@@ -148,7 +155,17 @@ const Signup = () => {
         await supabase.from('profiles').update({
           user_type: 'customer' as const,
           ...(phone ? { phone } : {}),
+          accepted_terms_at: new Date().toISOString(),
         }).eq('user_id', userId);
+
+        // Track referral if present
+        if (referralCode) {
+          const { data: partner } = await supabase.from('partner_companies').select('id').eq('referral_code', referralCode).eq('status', 'approved').single();
+          if (partner) {
+            await supabase.from('profiles').update({ referred_by_partner_id: partner.id }).eq('user_id', userId);
+            await supabase.from('partner_referrals').insert({ partner_id: partner.id, referred_user_id: userId, referral_code_used: referralCode });
+          }
+        }
       }
 
       if (!hasSession) {
@@ -170,6 +187,10 @@ const Signup = () => {
   };
 
   const handleDriverSubmit = async () => {
+    if (!acceptedTerms) {
+      toast({ title: lang === 'ar' ? 'يجب الموافقة على الشروط والأحكام' : 'You must accept the Terms & Conditions', variant: 'destructive' });
+      return;
+    }
     // Validate step 3
     if (!carBrand || !carModel || !carYear || !licenseNumber) {
       toast({ title: t('auth.error'), description: lang === 'ar' ? 'يرجى ملء جميع حقول السيارة' : 'Please fill all car fields', variant: 'destructive' });
@@ -205,7 +226,17 @@ const Signup = () => {
         await supabase.from('profiles').update({
           user_type: 'driver' as const,
           phone,
+          accepted_terms_at: new Date().toISOString(),
         }).eq('user_id', userId);
+
+        // Track referral if present
+        if (referralCode) {
+          const { data: partner } = await supabase.from('partner_companies').select('id').eq('referral_code', referralCode).eq('status', 'approved').single();
+          if (partner) {
+            await supabase.from('profiles').update({ referred_by_partner_id: partner.id }).eq('user_id', userId);
+            await supabase.from('partner_referrals').insert({ partner_id: partner.id, referred_user_id: userId, referral_code_used: referralCode });
+          }
+        }
 
         // Upload all documents
         const uploads = await Promise.all([
@@ -398,7 +429,29 @@ const Signup = () => {
               </div>
             </div>
 
-            <Button type="submit" className="w-full gap-2" size="lg" disabled={loading}>
+            {/* Terms acceptance */}
+            <div className="flex items-start gap-3 pt-2">
+              <input
+                type="checkbox"
+                id="acceptTermsRider"
+                checked={acceptedTerms}
+                onChange={(e) => setAcceptedTerms(e.target.checked)}
+                className="w-5 h-5 rounded border-border text-primary focus:ring-primary mt-0.5"
+              />
+              <Label htmlFor="acceptTermsRider" className="cursor-pointer text-sm leading-relaxed">
+                {lang === 'ar'
+                  ? <>أوافق على <Link to="/legal?section=terms" target="_blank" className="text-primary underline">الشروط والأحكام</Link> و<Link to="/legal?section=privacy" target="_blank" className="text-primary underline">سياسة الخصوصية</Link></>
+                  : <>I agree to the <Link to="/legal?section=terms" target="_blank" className="text-primary underline">Terms & Conditions</Link> and <Link to="/legal?section=privacy" target="_blank" className="text-primary underline">Privacy Policy</Link></>}
+              </Label>
+            </div>
+
+            {referralCode && (
+              <p className="text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">
+                {lang === 'ar' ? `كود الإحالة: ${referralCode}` : `Referral code: ${referralCode}`}
+              </p>
+            )}
+
+            <Button type="submit" className="w-full gap-2" size="lg" disabled={loading || !acceptedTerms}>
               {loading ? (lang === 'ar' ? 'جاري التسجيل...' : 'Creating account...') : t('auth.signup')}
               <Arrow className="w-4 h-4" />
             </Button>
@@ -617,7 +670,23 @@ const Signup = () => {
                 />
               )}
 
-              <Button type="button" className="w-full gap-2" size="lg" disabled={loading} onClick={handleDriverSubmit}>
+              {/* Terms acceptance for drivers */}
+              <div className="flex items-start gap-3 pt-2 border-t border-border">
+                <input
+                  type="checkbox"
+                  id="acceptTermsDriver"
+                  checked={acceptedTerms}
+                  onChange={(e) => setAcceptedTerms(e.target.checked)}
+                  className="w-5 h-5 rounded border-border text-primary focus:ring-primary mt-0.5"
+                />
+                <Label htmlFor="acceptTermsDriver" className="cursor-pointer text-sm leading-relaxed">
+                  {lang === 'ar'
+                    ? <>أوافق على <Link to="/legal?section=terms" target="_blank" className="text-primary underline">الشروط والأحكام</Link> و<Link to="/legal?section=privacy" target="_blank" className="text-primary underline">سياسة الخصوصية</Link> بما فيها نسبة المنصة والتزامات السائق المالية</>
+                    : <>I agree to the <Link to="/legal?section=terms" target="_blank" className="text-primary underline">Terms & Conditions</Link> and <Link to="/legal?section=privacy" target="_blank" className="text-primary underline">Privacy Policy</Link>, including platform commission and driver payment obligations</>}
+                </Label>
+              </div>
+
+              <Button type="button" className="w-full gap-2" size="lg" disabled={loading || !acceptedTerms} onClick={handleDriverSubmit}>
                 {loading ? (lang === 'ar' ? 'جاري الإرسال...' : 'Submitting...') : (lang === 'ar' ? 'إرسال طلب التسجيل' : 'Submit Application')}
                 <Arrow className="w-4 h-4" />
               </Button>
