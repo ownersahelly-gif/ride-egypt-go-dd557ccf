@@ -187,6 +187,10 @@ const Signup = () => {
   };
 
   const handleDriverSubmit = async () => {
+    if (!acceptedTerms) {
+      toast({ title: lang === 'ar' ? 'يجب الموافقة على الشروط والأحكام' : 'You must accept the Terms & Conditions', variant: 'destructive' });
+      return;
+    }
     // Validate step 3
     if (!carBrand || !carModel || !carYear || !licenseNumber) {
       toast({ title: t('auth.error'), description: lang === 'ar' ? 'يرجى ملء جميع حقول السيارة' : 'Please fill all car fields', variant: 'destructive' });
