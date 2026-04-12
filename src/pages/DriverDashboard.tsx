@@ -220,6 +220,21 @@ const DriverDashboard = () => {
 
   const saveSchedule = async () => {
     if (!user || !shuttle || !scheduleForm.route_id || scheduleForm.days.length === 0 || scheduleForm.timeSlots.length === 0) return;
+    
+    // Check for duplicate day+time combos that already exist
+    const existingForRoute = driverSchedules.filter(s => s.route_id === scheduleForm.route_id);
+    const duplicates: string[] = [];
+    for (const day of scheduleForm.days) {
+      for (const slot of scheduleForm.timeSlots) {
+        const exists = existingForRoute.find(s => s.day_of_week === day && s.departure_time?.slice(0, 5) === slot.time);
+        if (exists) duplicates.push(`${dayNames[day]} ${slot.time}`);
+      }
+    }
+    if (duplicates.length > 0 && duplicates.length === scheduleForm.days.length * scheduleForm.timeSlots.length) {
+      toast({ title: lang === 'ar' ? 'هذا الجدول موجود بالفعل' : 'Schedule already exists', description: duplicates.join(', '), variant: 'destructive' });
+      return;
+    }
+    
     setSavingSchedule(true);
     // Create one schedule entry per day per time slot
     const goSlots = scheduleForm.timeSlots.filter(s => s.direction === 'go');
