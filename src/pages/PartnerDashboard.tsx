@@ -157,7 +157,6 @@ const PartnerDashboard = () => {
       price: routeForm.price,
       estimated_duration_minutes: routeForm.estimated_duration_minutes,
       stops_json: routeForm.stops,
-      status: 'pending' as const,
     };
 
     let error;
