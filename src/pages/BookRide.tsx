@@ -1021,8 +1021,8 @@ const BookRide = () => {
               </div>
             )}
 
-            {/* Available Bundles */}
-            {availableBundles.length > 0 && !activeBundlePurchase && (
+            {/* Available Packages */}
+            {packageTemplates.length > 0 && !activeBundlePurchase && (
               <div className="bg-card border border-border rounded-2xl p-5 space-y-3">
                 <button
                   onClick={() => setShowBundleSection(!showBundleSection)}
@@ -1030,60 +1030,71 @@ const BookRide = () => {
                 >
                   <h3 className="font-semibold text-foreground flex items-center gap-2">
                     <Package className="w-4 h-4 text-secondary" />
-                    {lang === 'ar' ? 'باقات مخفضة' : 'Discounted Bundles'}
+                    {lang === 'ar' ? 'باقات مخفضة' : 'Discounted Packages'}
                   </h3>
                   <span className="text-xs text-secondary font-medium">
-                    {lang === 'ar' ? `وفّر حتى ${Math.max(...availableBundles.map((b: any) => b.discount_percentage))}%` : `Save up to ${Math.max(...availableBundles.map((b: any) => b.discount_percentage))}%`}
+                    {lang === 'ar' ? `وفّر حتى ${Math.round((1 - Math.min(...packageTemplates.map(p => Number(p.factor)))) * 100)}%` : `Save up to ${Math.round((1 - Math.min(...packageTemplates.map(p => Number(p.factor)))) * 100)}%`}
                   </span>
                 </button>
 
                 {showBundleSection && (
                   <div className="space-y-3 pt-2">
-                    {availableBundles.map((bundle: any) => {
-                      const singlePrice = selectedRide.routes?.price || 0;
-                      const bundlePricePerRide = bundle.price / bundle.ride_count;
-                      const savings = (singlePrice * bundle.ride_count) - bundle.price;
+                    {packageTemplates.map((pkg: any) => {
+                      const routePrice = selectedRide.routes?.price || 0;
+                      const factor = getAppliedFactor(pkg);
+                      const rides = pkg.ride_count || 30;
+                      const packageTotal = getPackagePrice(pkg, routePrice);
+                      const normalTotal = routePrice * rides;
+                      const savings = normalTotal - packageTotal;
+                      const pricePerRide = Math.round(packageTotal / rides);
+                      const discountPct = Math.round((1 - factor) * 100);
+
                       return (
-                        <div key={bundle.id} className="bg-surface rounded-xl p-4 border border-border space-y-3">
+                        <div key={pkg.id} className={`bg-surface rounded-xl p-4 border-2 transition-colors space-y-3 ${selectedPackage?.id === pkg.id ? 'border-secondary' : 'border-border'}`}>
                           <div className="flex items-center justify-between">
                             <div>
-                              <p className="font-bold text-foreground">
-                                {bundle.bundle_type === 'weekly'
-                                  ? (lang === 'ar' ? 'باقة أسبوعية' : 'Weekly Bundle')
-                                  : (lang === 'ar' ? 'باقة شهرية' : 'Monthly Bundle')}
-                              </p>
+                              <p className="font-bold text-foreground">{lang === 'ar' ? pkg.name_ar : pkg.name_en}</p>
                               <p className="text-sm text-muted-foreground">
-                                {bundle.ride_count} {lang === 'ar' ? 'رحلة' : 'rides'}
+                                {pkg.ride_count ? `${pkg.ride_count} ${lang === 'ar' ? 'رحلة' : 'rides'}` : (lang === 'ar' ? '∞ غير محدود' : '∞ Unlimited')}
+                                {' · '}{pkg.validity_days} {lang === 'ar' ? 'يوم' : 'days'}
                               </p>
                             </div>
                             <div className="text-end">
-                              <p className="text-xl font-bold text-primary">{bundle.price} EGP</p>
-                              <p className="text-xs text-muted-foreground line-through">{singlePrice * bundle.ride_count} EGP</p>
+                              <p className="text-xl font-bold text-primary">{packageTotal} EGP</p>
+                              {savings > 0 && <p className="text-xs text-muted-foreground line-through">{normalTotal} EGP</p>}
                             </div>
                           </div>
-                          <div className="flex items-center gap-2 text-xs">
-                            <span className="bg-secondary/10 text-secondary font-medium px-2 py-1 rounded-full">
-                              {lang === 'ar' ? `وفّر ${savings} جنيه` : `Save ${savings} EGP`}
-                            </span>
+                          <div className="flex items-center gap-2 text-xs flex-wrap">
+                            {discountPct > 0 && (
+                              <span className="bg-secondary/10 text-secondary font-medium px-2 py-1 rounded-full">
+                                {lang === 'ar' ? `خصم ${discountPct}%` : `${discountPct}% off`}
+                              </span>
+                            )}
+                            {savings > 0 && (
+                              <span className="bg-secondary/10 text-secondary font-medium px-2 py-1 rounded-full">
+                                {lang === 'ar' ? `وفّر ${savings} جنيه` : `Save ${savings} EGP`}
+                              </span>
+                            )}
                             <span className="text-muted-foreground">
-                              {lang === 'ar' ? `${bundlePricePerRide.toFixed(0)} جنيه/رحلة` : `${bundlePricePerRide.toFixed(0)} EGP/ride`}
+                              {lang === 'ar' ? `${pricePerRide} جنيه/رحلة` : `${pricePerRide} EGP/ride`}
                             </span>
+                            <span className="text-muted-foreground font-mono">×{factor.toFixed(2)}</span>
                           </div>
                           <Button
                             className="w-full"
                             variant="secondary"
                             size="sm"
                             disabled={loading || !paymentProof}
-                            onClick={() => handleBuyBundle(bundle)}
+                            onClick={() => handleBuyPackage(pkg)}
                           >
                             <Package className="w-4 h-4 me-1" />
-                            {lang === 'ar' ? 'شراء الباقة' : 'Buy Bundle'}
+                            {lang === 'ar' ? 'شراء الباقة' : 'Buy Package'}
                           </Button>
                         </div>
                       );
                     })}
                     <p className="text-xs text-muted-foreground text-center">
-                      {lang === 'ar' ? 'ارفع إثبات الدفع أدناه ثم اضغط "شراء الباقة"' : 'Upload payment proof below then click "Buy Bundle"'}
+                      {lang === 'ar' ? 'ارفع إثبات الدفع أدناه ثم اضغط "شراء الباقة"' : 'Upload payment proof below then click "Buy Package"'}
                     </p>
                   </div>
                 )}
