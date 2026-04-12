@@ -199,13 +199,19 @@ const BookRide = () => {
     setRouteStops(stops || []);
 
     if (user && ride.route_id) {
-      const [{ data: savedLocs }, { data: bundles }, { data: purchases }] = await Promise.all([
+      const [{ data: savedLocs }, { data: pkgTemplates }, { data: rOverrides }, { data: tRules }, { data: gFactor }, { data: purchases }] = await Promise.all([
         supabase.from('saved_locations').select('*').eq('user_id', user.id).eq('route_id', ride.route_id).order('use_count', { ascending: false }).limit(5),
-        supabase.from('ride_bundles').select('*').eq('route_id', ride.route_id).eq('is_active', true),
+        supabase.from('package_templates').select('*').eq('is_active', true).order('sort_order'),
+        supabase.from('route_package_overrides').select('*').eq('route_id', ride.route_id),
+        supabase.from('time_based_pricing_rules').select('*').eq('is_active', true),
+        supabase.from('app_settings').select('value').eq('key', 'global_default_factor').single(),
         supabase.from('bundle_purchases').select('*').eq('user_id', user.id).eq('route_id', ride.route_id).eq('status', 'active').gt('rides_remaining', 0).gt('expires_at', new Date().toISOString()).limit(1),
       ]);
       setSavedLocations(savedLocs || []);
-      setAvailableBundles(bundles || []);
+      setPackageTemplates(pkgTemplates || []);
+      setRouteOverrides(rOverrides || []);
+      setTimeRules(tRules || []);
+      if (gFactor) setGlobalDefaultFactor(parseFloat(gFactor.value) || 1.0);
       setActiveBundlePurchase(purchases?.[0] || null);
     }
   };
