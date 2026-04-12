@@ -245,8 +245,8 @@ const MyBookings = () => {
                     <span>{booking.seats} {t('booking.seat')}</span>
                   </div>
 
-                  {/* ETA Banner for active rides */}
-                  {eta && !booking.status.includes('boarded') && (
+                  {/* ETA Banner for active rides — only show when trip has started (shuttle has live GPS) */}
+                  {eta && eta.isLive && !booking.status.includes('boarded') && (
                     <div className={`${eta.isLive ? 'bg-primary/10' : 'bg-secondary/10'} rounded-lg p-3 mb-3 flex items-center justify-between`}>
                       <div className="flex items-center gap-2">
                         <Timer className={`w-4 h-4 ${eta.isLive ? 'text-primary' : 'text-secondary'}`} />

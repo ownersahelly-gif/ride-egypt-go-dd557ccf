@@ -188,7 +188,8 @@ const BookRide = () => {
     setPickupMode('start');
     setDropoffMode('end');
     setUseBundle(false);
-    setTripDirection('both');
+    // Default trip direction based on ride direction
+    setTripDirection(ride.direction === 'go' ? 'go' : ride.direction === 'return' ? 'return' : 'both');
     setStep('details');
 
     const { data: stops } = await supabase
