@@ -1366,7 +1366,7 @@ const DriverDashboard = () => {
               });
 
               // Split into upcoming and past
-              const nowMs = Date.now();
+              const nowMs = nowTick;
               const todayDate = new Date().toISOString().split('T')[0];
               const upcomingKeys: string[] = [];
               const pastKeys: string[] = [];
