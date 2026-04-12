@@ -564,6 +564,7 @@ const AdminPanel = () => {
     { key: 'drivers', icon: Users, label: lang === 'ar' ? 'السائقين' : 'Drivers' },
     { key: 'shuttles', icon: Car, label: lang === 'ar' ? 'الشاتلات' : 'Shuttles' },
     { key: 'bookings', icon: Ticket, label: lang === 'ar' ? 'الحجوزات' : 'Bookings' },
+    { key: 'refunds', icon: RotateCcw, label: lang === 'ar' ? 'المبالغ المستردة' : 'Refunds' },
     { key: 'users', icon: Users, label: lang === 'ar' ? 'المستخدمين' : 'Users' },
     { key: 'route_requests', icon: MapPin, label: lang === 'ar' ? 'طلبات المسارات' : 'Route Requests' },
     { key: 'content', icon: Globe, label: lang === 'ar' ? 'المحتوى' : 'Content' },
