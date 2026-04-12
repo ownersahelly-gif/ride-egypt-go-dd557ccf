@@ -306,7 +306,7 @@ const Signup = () => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
-  const referralCode = searchParams.get('ref') || '';
+  const [referralCode, setReferralCode] = useState('');
 
   // Driver photos
   const [facePhoto, setFacePhoto] = useState<UploadedFile | null>(null);
