@@ -1,4 +1,4 @@
-import { useState, useEffect, Fragment } from 'react';
+import { useState, useEffect, Fragment, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -19,6 +19,7 @@ import {
   Copy, ExternalLink
 } from 'lucide-react';
 import PackagePricing from '@/components/admin/PackagePricing';
+import { smartGroupRequests, generateSmartRoute, haversine, type RouteRequest, type SmartGroup, type GeneratedRoute } from '@/lib/smartRouting';
 
 type AdminTab = 'routes' | 'drivers' | 'shuttles' | 'bookings' | 'analytics' | 'approvals' | 'settings' | 'carpool' | 'users' | 'route_requests' | 'packages' | 'content' | 'refunds' | 'earnings' | 'partners' | 'partner_routes' | 'partner_packages';
 
