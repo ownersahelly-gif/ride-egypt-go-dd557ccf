@@ -391,6 +391,102 @@ const GlobalMap = () => {
     setPrice('');
   };
 
+  // Save connected route to route management
+  const handleSaveConnectedRoute = async () => {
+    if (connectedDirections.length === 0) return;
+    setSavingConnectedRoute(true);
+    try {
+      // Extract start and end from the connected directions
+      const pickupRoute = connectedDirections[0];
+      const lastRoute = connectedDirections[connectedDirections.length - 1];
+      const startLeg = pickupRoute?.routes[0]?.legs?.[0];
+      const lastLegs = lastRoute?.routes[0]?.legs;
+      const endLeg = lastLegs?.[lastLegs.length - 1];
+
+      const originName = startLeg?.start_address || 'Start';
+      const destName = endLeg?.end_address || 'End';
+      const originLat = startLeg?.start_location?.lat() || 0;
+      const originLng = startLeg?.start_location?.lng() || 0;
+      const destLat = endLeg?.end_location?.lat() || 0;
+      const destLng = endLeg?.end_location?.lng() || 0;
+
+      // Collect all waypoints as stops (all pickups then all dropoffs)
+      const users = filteredUsers.slice(0, 25);
+      const allStops: { name: string; lat: number; lng: number; type: string }[] = [];
+
+      // Pickup stops from optimized order
+      const pickupLegs = pickupRoute?.routes[0]?.legs || [];
+      pickupLegs.forEach((leg, i) => {
+        if (i === 0) {
+          allStops.push({ name: leg.start_address || `Pickup ${i+1}`, lat: leg.start_location.lat(), lng: leg.start_location.lng(), type: 'pickup' });
+        }
+        allStops.push({ name: leg.end_address || `Pickup ${i+2}`, lat: leg.end_location.lat(), lng: leg.end_location.lng(), type: 'pickup' });
+      });
+
+      // Dropoff stops from optimized order
+      const dropoffRoute = connectedDirections.length >= 3 ? connectedDirections[2] : connectedDirections.length >= 2 ? connectedDirections[1] : null;
+      const dropoffLegs = dropoffRoute?.routes[0]?.legs || [];
+      dropoffLegs.forEach((leg, i) => {
+        if (i === 0) {
+          allStops.push({ name: leg.start_address || `Dropoff ${i+1}`, lat: leg.start_location.lat(), lng: leg.start_location.lng(), type: 'dropoff' });
+        }
+        allStops.push({ name: leg.end_address || `Dropoff ${i+2}`, lat: leg.end_location.lat(), lng: leg.end_location.lng(), type: 'dropoff' });
+      });
+
+      // Deduplicate stops by proximity
+      const uniqueStops: typeof allStops = [];
+      allStops.forEach(s => {
+        const exists = uniqueStops.some(e => Math.abs(e.lat - s.lat) < 0.001 && Math.abs(e.lng - s.lng) < 0.001);
+        if (!exists) uniqueStops.push(s);
+      });
+
+      // Calculate total distance/duration
+      let totalDur = 0;
+      connectedDirections.forEach(dir => {
+        dir.routes[0]?.legs?.forEach(l => { totalDur += l.duration?.value || 0; });
+      });
+
+      const routeName = `${originName.split(',')[0]} → ${destName.split(',')[0]}`;
+      const { data: routeData, error: routeErr } = await supabase.from('routes').insert({
+        name_en: routeName,
+        name_ar: routeName,
+        origin_name_en: originName,
+        origin_name_ar: originName,
+        origin_lat: originLat,
+        origin_lng: originLng,
+        destination_name_en: destName,
+        destination_name_ar: destName,
+        destination_lat: destLat,
+        destination_lng: destLng,
+        price: 0,
+        estimated_duration_minutes: Math.round(totalDur / 60),
+        status: 'active',
+      }).select().single();
+
+      if (routeErr) throw routeErr;
+
+      if (uniqueStops.length > 0 && routeData) {
+        const stopsInsert = uniqueStops.map((s, i) => ({
+          route_id: routeData.id,
+          name_en: s.name.split(',').slice(0, 2).join(','),
+          name_ar: s.name.split(',').slice(0, 2).join(','),
+          lat: s.lat,
+          lng: s.lng,
+          stop_order: i + 1,
+          stop_type: s.type as 'pickup' | 'dropoff' | 'both',
+        }));
+        await supabase.from('stops').insert(stopsInsert);
+      }
+
+      toast({ title: 'Route saved!', description: `${routeName} with ${uniqueStops.length} stops` });
+      navigate('/admin');
+    } catch (err: any) {
+      toast({ title: 'Save failed', description: err.message, variant: 'destructive' });
+    } finally {
+      setSavingConnectedRoute(false);
+    }
+  };
+
   const handleAssignUser = (userId: string, stopId: string) => {
     setRouteStops(prev => prev.map(s => {
       if (s.id === stopId) {
