@@ -577,6 +577,10 @@ const GlobalMap = () => {
         addingCircleType={addingCircleType}
         addingCirclePairId={addingCirclePairId}
         onCancelAdding={() => { setAddingCircleType(null); setAddingCirclePairId(''); }}
+        hourlyDistribution={hourlyDistribution}
+        canSaveConnectedRoute={showConnectedRoutes && connectedDirections.length > 0}
+        onSaveConnectedRoute={handleSaveConnectedRoute}
+        savingConnectedRoute={savingConnectedRoute}
       />
 
       <UserSidebar
