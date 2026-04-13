@@ -840,6 +840,10 @@ const MyBookings = () => {
                   origin={{ lat: route.origin_lat, lng: route.origin_lng }}
                   destination={{ lat: route.destination_lat, lng: route.destination_lng }}
                   markers={mapMarkers}
+                  connectionLines={connectionLines}
+                  showDirections={false}
+                  center={editMapCenter}
+                  zoom={editMapZoom}
                   className="h-full w-full"
                 />
               </div>
