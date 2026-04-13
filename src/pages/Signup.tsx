@@ -166,7 +166,8 @@ const CompanySignup = ({ lang, t, appName, signUp, navigate, toast, referralCode
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-surface px-4 py-8">
+    <div className="h-[100dvh] bg-surface overflow-y-auto px-4 py-8" style={{ WebkitOverflowScrolling: 'touch' }}>
+      <div className="min-h-full flex items-center justify-center">
       <div className="w-full max-w-md">
         <div className="text-center mb-6">
           <Link to="/" className="text-3xl font-bold text-primary font-arabic">{appName}</Link>
@@ -541,7 +542,8 @@ const Signup = () => {
   // Step 0: Role selection
   if (!role) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-surface px-4">
+      <div className="h-[100dvh] bg-surface overflow-y-auto px-4 py-8" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div className="min-h-full flex items-center justify-center">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
             <Link to="/" className="text-3xl font-bold text-primary font-arabic">
@@ -624,7 +626,8 @@ const Signup = () => {
   // Rider: simple form
   if (role === 'rider') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-surface px-4 py-8">
+      <div className="h-[100dvh] bg-surface overflow-y-auto px-4 py-8" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div className="min-h-full flex items-center justify-center">
         <div className="w-full max-w-md">
           <div className="text-center mb-6">
             <Link to="/" className="text-3xl font-bold text-primary font-arabic">
