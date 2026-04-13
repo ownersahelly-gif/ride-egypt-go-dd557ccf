@@ -34,6 +34,9 @@ interface MapToolbarProps {
   canSaveConnectedRoute: boolean;
   onSaveConnectedRoute: () => void;
   savingConnectedRoute: boolean;
+  onOpenInGoogleMaps: () => void;
+  onFilterCommonDays: () => void;
+  commonDaysActive: boolean;
 }
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -49,6 +52,7 @@ const MapToolbar = ({
   circleZones, onAddCircleZone, onCreatePair, onDeletePair, onDeleteZone, onUpdateZoneRadius,
   addingCircleType, addingCirclePairId, onCancelAdding,
   hourlyDistribution, canSaveConnectedRoute, onSaveConnectedRoute, savingConnectedRoute,
+  onOpenInGoogleMaps, onFilterCommonDays, commonDaysActive,
 }: MapToolbarProps) => {
   const [newPairName, setNewPairName] = useState('');
   const [showZones, setShowZones] = useState(false);
@@ -67,9 +71,9 @@ const MapToolbar = ({
 
   return (
     <div className="absolute top-0 left-0 right-0 z-10 bg-card/95 backdrop-blur border-b border-border">
-      {/* Main toolbar */}
-      <div className="flex items-center gap-2 px-3 py-2">
-        <Link to="/admin">
+      {/* Main toolbar - scrollable */}
+      <div className="flex items-center gap-2 px-3 py-2 overflow-x-auto scrollbar-thin">
+        <Link to="/admin" className="shrink-0">
           <Button variant="ghost" size="icon" className="shrink-0">
             <ChevronLeft className="w-5 h-5" />
           </Button>
@@ -79,18 +83,18 @@ const MapToolbar = ({
           {visibleCount}/{totalCount} users
         </span>
         
-        <div className="flex-1" />
+        <div className="flex-1 min-w-4" />
 
-        <Button variant={showFilters ? 'secondary' : 'outline'} size="sm" onClick={onToggleFilters} className="gap-1">
+        <Button variant={showFilters ? 'secondary' : 'outline'} size="sm" onClick={onToggleFilters} className="gap-1 shrink-0">
           <Filter className="w-3.5 h-3.5" />
           Filters
           {hasFilters && <span className="w-2 h-2 rounded-full bg-primary" />}
         </Button>
-        <Button variant={showZones ? 'secondary' : 'outline'} size="sm" onClick={() => setShowZones(!showZones)} className="gap-1">
+        <Button variant={showZones ? 'secondary' : 'outline'} size="sm" onClick={() => setShowZones(!showZones)} className="gap-1 shrink-0">
           <Circle className="w-3.5 h-3.5" />
           Zones {circleZones.length > 0 && `(${pairIds.length})`}
         </Button>
-        <Button variant={showLines ? 'secondary' : 'outline'} size="sm" onClick={onToggleLines} className="gap-1">
+        <Button variant={showLines ? 'secondary' : 'outline'} size="sm" onClick={onToggleLines} className="gap-1 shrink-0">
           <Layers className="w-3.5 h-3.5" />
           Lines
         </Button>
@@ -98,24 +102,30 @@ const MapToolbar = ({
           variant={showConnectedRoutes ? 'secondary' : 'outline'}
           size="sm"
           onClick={onToggleConnectedRoutes}
-          className="gap-1"
+          className="gap-1 shrink-0"
           disabled={loadingRoutes}
         >
           <Route className="w-3.5 h-3.5" />
           {loadingRoutes ? 'Loading...' : showConnectedRoutes ? 'Hide Routes' : 'Show Routes'}
         </Button>
         {canSaveConnectedRoute && (
-          <Button size="sm" onClick={onSaveConnectedRoute} disabled={savingConnectedRoute} className="gap-1">
+          <Button size="sm" onClick={onSaveConnectedRoute} disabled={savingConnectedRoute} className="gap-1 shrink-0">
             <Save className="w-3.5 h-3.5" />
             {savingConnectedRoute ? 'Saving...' : 'Save to Routes'}
           </Button>
         )}
-        <Button variant={routeMode ? 'default' : 'outline'} size="sm" onClick={onToggleRouteMode} className="gap-1">
+        {canSaveConnectedRoute && (
+          <Button variant="outline" size="sm" onClick={onOpenInGoogleMaps} className="gap-1 shrink-0">
+            <ExternalLink className="w-3.5 h-3.5" />
+            Open in Maps
+          </Button>
+        )}
+        <Button variant={routeMode ? 'default' : 'outline'} size="sm" onClick={onToggleRouteMode} className="gap-1 shrink-0">
           <Route className="w-3.5 h-3.5" />
           {routeMode ? 'Building...' : 'Build Route'}
         </Button>
         {routeMode && (
-          <Button size="sm" onClick={onGenerateRoute}>
+          <Button size="sm" onClick={onGenerateRoute} className="shrink-0">
             Generate Route
           </Button>
         )}
@@ -172,7 +182,7 @@ const MapToolbar = ({
               })}
             </div>
           )}
-          <div className="flex gap-1 flex-wrap">
+          <div className="flex gap-1 flex-wrap items-center">
             {DAY_LABELS.map((label, i) => (
               <button
                 key={i}
@@ -186,6 +196,17 @@ const MapToolbar = ({
                 {label}
               </button>
             ))}
+            {filters.days.length >= 2 && (
+              <Button
+                variant={commonDaysActive ? 'secondary' : 'outline'}
+                size="sm"
+                onClick={onFilterCommonDays}
+                className="h-6 text-[10px] gap-1 ml-1"
+              >
+                <Users className="w-3 h-3" />
+                Common Only
+              </Button>
+            )}
           </div>
         </div>
       )}
