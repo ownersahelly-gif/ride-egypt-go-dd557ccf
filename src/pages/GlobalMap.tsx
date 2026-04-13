@@ -55,6 +55,7 @@ const GlobalMap = () => {
   const [price, setPrice] = useState('');
   const [saving, setSaving] = useState(false);
   const [savingConnectedRoute, setSavingConnectedRoute] = useState(false);
+  const [connectedRouteInfo, setConnectedRouteInfo] = useState<{ distance: string; duration: string } | null>(null);
 
   // Fetch data
   useEffect(() => {
@@ -252,6 +253,7 @@ const GlobalMap = () => {
     if (showConnectedRoutes) {
       setShowConnectedRoutes(false);
       setConnectedDirections([]);
+      setConnectedRouteInfo(null);
       return;
     }
 
@@ -335,6 +337,21 @@ const GlobalMap = () => {
     }
 
     setConnectedDirections(results);
+
+    // Calculate total duration/distance
+    let totalDist = 0;
+    let totalDur = 0;
+    results.forEach(dir => {
+      dir.routes[0]?.legs?.forEach(l => {
+        totalDist += l.distance?.value || 0;
+        totalDur += l.duration?.value || 0;
+      });
+    });
+    setConnectedRouteInfo({
+      distance: `${(totalDist / 1000).toFixed(1)} km`,
+      duration: `${Math.round(totalDur / 60)} min`,
+    });
+
     setLoadingRoutes(false);
   }, [showConnectedRoutes, filteredUsers, toast]);
 
