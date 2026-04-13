@@ -371,6 +371,8 @@ const MapToolbar = ({
               Create a zone pair to filter by pickup and dropoff areas. Each pair links a pickup circle to a dropoff circle.
             </p>
           )}
+          </>
+          )}
         </div>
       )}
     </div>
