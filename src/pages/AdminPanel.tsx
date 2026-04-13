@@ -87,6 +87,8 @@ const AdminPanel = () => {
   const [rejectNotes, setRejectNotes] = useState<Record<string, string>>({});
   const [showRejectInput, setShowRejectInput] = useState<string | null>(null);
   const [partnerPackageRequests, setPartnerPackageRequests] = useState<any[]>([]);
+  const [expandedGroupIndex, setExpandedGroupIndex] = useState<number | null>(null);
+  const [creatingRouteFromGroup, setCreatingRouteFromGroup] = useState<number | null>(null);
 
   // Published trips
   const [publishedTrips, setPublishedTrips] = useState<any[]>([]);
