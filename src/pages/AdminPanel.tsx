@@ -66,6 +66,8 @@ const AdminPanel = () => {
   const [editingStopId, setEditingStopId] = useState<string | null>(null);
   const [globalWaitingTime, setGlobalWaitingTime] = useState('3');
   const [savingWaitingTime, setSavingWaitingTime] = useState(false);
+  const [dragStopIndex, setDragStopIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   // Content settings
   const [contentSettings, setContentSettings] = useState<Record<string, string>>({});
@@ -592,6 +594,18 @@ const AdminPanel = () => {
       supabase.from('stops').update({ stop_order: targetIndex }).eq('id', currentStop.id),
       supabase.from('stops').update({ stop_order: index }).eq('id', targetStop.id),
     ]);
+    await fetchStopsForRoute(routeId);
+  };
+
+  const handleStopDrop = async (routeId: string, fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
+    const stops = [...(routeStopsMap[routeId] || [])];
+    const [moved] = stops.splice(fromIndex, 1);
+    stops.splice(toIndex, 0, moved);
+    setRouteStopsMap(prev => ({ ...prev, [routeId]: stops }));
+    await Promise.all(stops.map((s, i) => 
+      supabase.from('stops').update({ stop_order: i }).eq('id', s.id)
+    ));
     await fetchStopsForRoute(routeId);
   };
 
@@ -1228,7 +1242,16 @@ const AdminPanel = () => {
                     {(routeStopsMap[route.id] || []).length > 0 ? (
                       <div className="space-y-2">
                         {(routeStopsMap[route.id] || []).map((stop: any, idx: number) => (
-                          <div key={stop.id} className="flex items-center justify-between bg-surface rounded-lg px-3 py-2 text-sm">
+                          <div key={stop.id}
+                            draggable
+                            onDragStart={() => setDragStopIndex(idx)}
+                            onDragOver={(e) => { e.preventDefault(); setDragOverIndex(idx); }}
+                            onDragEnd={() => { setDragStopIndex(null); setDragOverIndex(null); }}
+                            onDrop={() => { if (dragStopIndex !== null) handleStopDrop(route.id, dragStopIndex, idx); setDragStopIndex(null); setDragOverIndex(null); }}
+                            className={`flex items-center justify-between bg-surface rounded-lg px-3 py-2 text-sm cursor-grab active:cursor-grabbing transition-all ${
+                              dragOverIndex === idx ? 'ring-2 ring-primary/50 scale-[1.01]' : ''
+                            } ${dragStopIndex === idx ? 'opacity-40' : ''}`}
+                          >
                             <div className="flex items-center gap-2">
                               <span className="w-6 h-6 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-bold">{idx + 1}</span>
                               <div>
