@@ -39,8 +39,12 @@ const MyBookings = () => {
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [confirmCancelId, setConfirmCancelId] = useState<string | null>(null);
   const [receiptBooking, setReceiptBooking] = useState<any>(null);
-  // All bookings on same shuttle+date for ETA calculation
   const [peerBookings, setPeerBookings] = useState<Record<string, any[]>>({});
+  const [editingBooking, setEditingBooking] = useState<any>(null);
+  const [editingPin, setEditingPin] = useState<'origin' | 'destination' | null>(null);
+  const [editPickup, setEditPickup] = useState<{ lat: number; lng: number; name: string } | undefined>();
+  const [editDropoff, setEditDropoff] = useState<{ lat: number; lng: number; name: string } | undefined>();
+  const [savingLocation, setSavingLocation] = useState(false);
 
   useEffect(() => {
     if (!user) return;
