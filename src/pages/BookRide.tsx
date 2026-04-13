@@ -41,6 +41,7 @@ const BookRide = () => {
   const [allRouteStops, setAllRouteStops] = useState<Record<string, any[]>>({});
   const [driverRatings, setDriverRatings] = useState<Record<string, { avg: number; count: number }>>({});
   const [step, setStep] = useState<'browse' | 'details' | 'confirm'>('browse');
+  const [userBookedRides, setUserBookedRides] = useState<Set<string>>(new Set());
 
   // Pickup
   const [pickupMode, setPickupMode] = useState<'start' | 'stop'>('start');
