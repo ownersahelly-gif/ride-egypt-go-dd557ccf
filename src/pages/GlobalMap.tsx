@@ -753,7 +753,12 @@ const GlobalMap = () => {
               url: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png',
               scaledSize: new google.maps.Size(32, 32),
             }}
+            draggable={showConnectedRoutes}
             onClick={() => setSelectedUser(u)}
+            onDragEnd={(e) => {
+              if (!e.latLng) return;
+              setAllUsers(prev => prev.map(usr => usr.id === u.id ? { ...usr, originLat: e.latLng!.lat(), originLng: e.latLng!.lng() } : usr));
+            }}
           />
         ))}
 
@@ -766,7 +771,12 @@ const GlobalMap = () => {
               url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
               scaledSize: new google.maps.Size(32, 32),
             }}
+            draggable={showConnectedRoutes}
             onClick={() => setSelectedUser(u)}
+            onDragEnd={(e) => {
+              if (!e.latLng) return;
+              setAllUsers(prev => prev.map(usr => usr.id === u.id ? { ...usr, destinationLat: e.latLng!.lat(), destinationLng: e.latLng!.lng() } : usr));
+            }}
           />
         ))}
 
