@@ -922,7 +922,7 @@ const MyBookings = () => {
                 {editDropoffMode === 'stop' && (
                   <div className="space-y-1 max-h-40 overflow-y-auto">
                     {dropoffStops.map((stop: any) => (
-                      <button key={stop.id} onClick={() => setEditSelectedDropoffStop(stop)}
+                      <button key={stop.id} onClick={() => { setEditSelectedDropoffStop(stop); zoomToPoint(stop.lat, stop.lng); }}
                         className={`w-full text-start px-3 py-2 rounded-lg text-xs border transition-colors flex items-center gap-2 ${
                           editSelectedDropoffStop?.id === stop.id ? 'bg-primary text-primary-foreground border-primary' : 'bg-card text-foreground border-border hover:border-primary/50'
                         }`}>
