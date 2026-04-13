@@ -1109,14 +1109,6 @@ const AdminPanel = () => {
                     </div>
                     <p className="text-xs text-muted-foreground">{routeForm.destination_lat.toFixed(4)}, {routeForm.destination_lng.toFixed(4)}</p>
                   </div>
-                  <div className="space-y-2">
-                    <Label>{lang === 'ar' ? 'السعر للفرد (جنيه)' : 'Price per person (EGP)'}</Label>
-                    <Input type="number" value={routeForm.price} onChange={e => setRouteForm(p => ({ ...p, price: parseFloat(e.target.value) }))} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Duration (min)</Label>
-                    <Input type="number" value={routeForm.estimated_duration_minutes} onChange={e => setRouteForm(p => ({ ...p, estimated_duration_minutes: parseInt(e.target.value) }))} />
-                  </div>
                 </div>
                 <div className="flex gap-2">
                   <Button onClick={createRoute} disabled={!routeForm.name_en || !routeForm.name_ar}>
@@ -1143,8 +1135,6 @@ const AdminPanel = () => {
                   <span>{lang === 'ar' ? route.destination_name_ar : route.destination_name_en}</span>
                 </div>
                 <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
-                  <span>{route.price} EGP</span>
-                  <span><Clock className="w-3 h-3 inline me-1" />{route.estimated_duration_minutes} min</span>
                   <span className="flex items-center gap-1">
                     <ListOrdered className="w-3 h-3 inline" />
                     {routeStopsMap[route.id]?.length || 0} {lang === 'ar' ? 'نقاط' : 'stops'}
@@ -1651,6 +1641,12 @@ const AdminPanel = () => {
                     <div>
                       <p className="font-medium text-foreground text-sm">{b.profile?.full_name || 'Unknown'} — {lang === 'ar' ? b.routes?.name_ar : b.routes?.name_en}</p>
                       <p className="text-xs text-muted-foreground">{b.scheduled_date} · {b.scheduled_time} · {b.seats} seat(s) · {b.total_price} EGP</p>
+                      {b.custom_pickup_name && (
+                        <p className="text-xs text-muted-foreground">
+                          📍 {b.custom_pickup_name} → {b.custom_dropoff_name}
+                        </p>
+                      )}
+                      {b.profile?.phone && <p className="text-xs text-muted-foreground">📞 {b.profile.phone}</p>}
                       {b.boarding_code && <p className="text-xs text-muted-foreground font-mono">Code: {b.boarding_code}</p>}
                     </div>
                     <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${statusColors[b.status]}`}>{b.status}</span>

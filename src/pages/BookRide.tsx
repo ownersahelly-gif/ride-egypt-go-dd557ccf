@@ -60,6 +60,7 @@ const BookRide = () => {
   const [selectedRide, setSelectedRide] = useState<any>(null);
   const [driverProfile, setDriverProfile] = useState<any>(null);
   const [shuttleInfo, setShuttleInfo] = useState<any>(null);
+  const [existingBooking, setExistingBooking] = useState<any>(null);
 
   // Route directions result
   const [routeDirections, setRouteDirections] = useState<any>(null);
@@ -170,8 +171,8 @@ const BookRide = () => {
         ride_date: pt.trip_date,
         route_id: pt.route_id,
         direction: 'go',
-        available_seats: 99,
-        total_seats: 99,
+        available_seats: 14,
+        total_seats: 14,
       })));
     }
 
@@ -220,6 +221,7 @@ const BookRide = () => {
     setPickupMode('start');
     setDropoffMode('end');
     setUseBundle(false);
+    setExistingBooking(null);
     // Default trip direction based on ride direction
     setTripDirection(ride.direction === 'go' ? 'go' : ride.direction === 'return' ? 'return' : 'both');
     setStep('details');
@@ -232,13 +234,15 @@ const BookRide = () => {
     setRouteStops(stops || []);
 
     if (user && ride.route_id) {
-      const [{ data: savedLocs }, { data: pkgTemplates }, { data: rOverrides }, { data: tRules }, { data: gFactor }, { data: purchases }] = await Promise.all([
+      const rideDate = ride.ride_date || ride.trip_date;
+      const [{ data: savedLocs }, { data: pkgTemplates }, { data: rOverrides }, { data: tRules }, { data: gFactor }, { data: purchases }, { data: existingBookings }] = await Promise.all([
         supabase.from('saved_locations').select('*').eq('user_id', user.id).eq('route_id', ride.route_id).order('use_count', { ascending: false }).limit(5),
         supabase.from('package_templates').select('*').eq('is_active', true).order('sort_order'),
         supabase.from('route_package_overrides').select('*').eq('route_id', ride.route_id),
         supabase.from('time_based_pricing_rules').select('*').eq('is_active', true),
         supabase.from('app_settings').select('value').eq('key', 'global_default_factor').single(),
         supabase.from('bundle_purchases').select('*').eq('user_id', user.id).eq('route_id', ride.route_id).eq('status', 'active').gt('rides_remaining', 0).gt('expires_at', new Date().toISOString()).limit(1),
+        supabase.from('bookings').select('id, status').eq('user_id', user.id).eq('route_id', ride.route_id).eq('scheduled_date', rideDate).eq('scheduled_time', ride.departure_time).not('status', 'eq', 'cancelled').limit(1),
       ]);
       setSavedLocations(savedLocs || []);
       setPackageTemplates(pkgTemplates || []);
@@ -246,6 +250,7 @@ const BookRide = () => {
       setTimeRules(tRules || []);
       if (gFactor) setGlobalDefaultFactor(parseFloat(gFactor.value) || 1.0);
       setActiveBundlePurchase(purchases?.[0] || null);
+      setExistingBooking(existingBookings?.[0] || null);
     }
   };
 
@@ -890,15 +895,10 @@ const BookRide = () => {
                         <span className="flex items-center gap-1 text-muted-foreground">
                           <Clock className="w-3.5 h-3.5" />{formatTime12h(ride.departure_time, lang)}
                         </span>
-                        <span className="flex items-center gap-1 text-muted-foreground">
-                          <Clock className="w-3.5 h-3.5" />{ride.routes?.estimated_duration_minutes} {t('booking.min')}
+                        <span className={`flex items-center gap-1 font-medium ${ride.available_seats <= 3 ? 'text-destructive' : 'text-green-600'}`}>
+                          <Users className="w-3.5 h-3.5" />
+                          {ride.available_seats}/{ride.total_seats} {lang === 'ar' ? 'متاح' : 'left'}
                         </span>
-                        {ride._type !== 'published' && (
-                          <span className={`flex items-center gap-1 font-medium ${ride.available_seats <= 3 ? 'text-destructive' : 'text-green-600'}`}>
-                            <Users className="w-3.5 h-3.5" />
-                            {ride.available_seats}/{ride.total_seats} {lang === 'ar' ? 'متاح' : 'left'}
-                          </span>
-                        )}
                       </div>
                       {ride._type !== 'published' && ride.available_seats <= 3 && ride.available_seats > 0 && (
                         <div className="mt-2 flex items-center gap-1 text-xs text-destructive font-medium">
@@ -971,11 +971,7 @@ const BookRide = () => {
                   </div>
                 </div>
               )}
-              <div className="grid grid-cols-3 gap-3">
-                <div className="bg-surface rounded-xl p-3 text-center">
-                  <p className="text-xl font-bold text-primary">{dynamicPrice} EGP</p>
-                  <p className="text-xs text-muted-foreground">{lang === 'ar' ? 'للراكب' : 'per person'}</p>
-                </div>
+              <div className="grid grid-cols-2 gap-3">
                 <div className="bg-surface rounded-xl p-3 text-center">
                   <p className="text-xl font-bold text-foreground">{formatTime12h(selectedRide.departure_time, lang)}</p>
                   <p className="text-xs text-muted-foreground">{lang === 'ar' ? 'الانطلاق' : 'Departure'}</p>
@@ -1050,7 +1046,8 @@ const BookRide = () => {
               {renderStopSelector('dropoff')}
             </div>
 
-            {/* Trip Direction */}
+            {/* Trip Direction — hide for published trips */}
+            {selectedRide._type !== 'published' && (
             <div className="bg-card border border-border rounded-2xl p-5 space-y-3">
               <h3 className="font-semibold text-foreground flex items-center gap-2">
                 <ArrowRight className="w-4 h-4 text-primary" />
@@ -1084,6 +1081,7 @@ const BookRide = () => {
                 </div>
               )}
             </div>
+            )}
 
             {/* Active Bundle */}
             {activeBundlePurchase && (
@@ -1239,7 +1237,18 @@ const BookRide = () => {
 
             {/* Review & Continue */}
             <div className="bg-card border border-border rounded-2xl p-5">
-              {selectedRide._type === 'published' ? (
+              {existingBooking ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm text-green-600 font-medium p-3 bg-green-50 dark:bg-green-950/30 rounded-xl">
+                    <CheckCircle2 className="w-5 h-5" />
+                    {lang === 'ar' ? 'لقد حجزت هذه الرحلة بالفعل' : 'You have already booked this ride'}
+                  </div>
+                  <Button className="w-full" size="lg" variant="secondary" onClick={() => navigate('/my-bookings')}>
+                    {lang === 'ar' ? 'عرض حجوزاتي' : 'View My Bookings'}
+                    <ArrowRight className="w-4 h-4 ms-1" />
+                  </Button>
+                </div>
+              ) : selectedRide._type === 'published' ? (
                 <Button className="w-full" size="lg" onClick={() => handleBook(false)}
                   disabled={loading || !isPickupValid || !isDropoffValid}>
                   {loading
