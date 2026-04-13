@@ -11,7 +11,7 @@ import {
   type RouteRequestUser, type FilterState, type RouteStop, type CircleZone,
   deduplicateRequests, isInRadius, ZONE_COLORS,
 } from '@/components/global-map/types';
-import { Loader2, EyeOff } from 'lucide-react';
+import { Loader2, EyeOff, Save } from 'lucide-react';
 
 const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 const cairoCenter = { lat: 30.0444, lng: 31.2357 };
@@ -54,6 +54,7 @@ const GlobalMap = () => {
   const [routeNameAr, setRouteNameAr] = useState('');
   const [price, setPrice] = useState('');
   const [saving, setSaving] = useState(false);
+  const [savingConnectedRoute, setSavingConnectedRoute] = useState(false);
 
   // Fetch data
   useEffect(() => {
