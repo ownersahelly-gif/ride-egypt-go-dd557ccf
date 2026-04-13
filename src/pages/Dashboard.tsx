@@ -167,15 +167,27 @@ const Dashboard = () => {
     setLoadingRides(true);
     setStep('results');
 
-    const { data } = await supabase
-      .from('ride_instances')
-      .select('*, routes(name_en, name_ar, origin_name_en, origin_name_ar, destination_name_en, destination_name_ar, price, estimated_duration_minutes, origin_lat, origin_lng, destination_lat, destination_lng)')
-      .eq('ride_date', selectedDate)
-      .eq('status', 'scheduled')
-      .order('departure_time');
+    // Fetch both ride_instances and published_trips
+    const [{ data: riData }, { data: ptData }] = await Promise.all([
+      supabase
+        .from('ride_instances')
+        .select('*, routes(name_en, name_ar, origin_name_en, origin_name_ar, destination_name_en, destination_name_ar, price, estimated_duration_minutes, origin_lat, origin_lng, destination_lat, destination_lng)')
+        .eq('ride_date', selectedDate)
+        .eq('status', 'scheduled')
+        .order('departure_time'),
+      supabase
+        .from('published_trips')
+        .select('*, routes(name_en, name_ar, origin_name_en, origin_name_ar, destination_name_en, destination_name_ar, price, estimated_duration_minutes, origin_lat, origin_lng, destination_lat, destination_lng)')
+        .eq('trip_date', selectedDate)
+        .eq('status', 'active')
+        .order('departure_time'),
+    ]);
 
-    if (data && data.length > 0) {
-      // Filter rides where pickup is near origin and dropoff is near destination (within 10km)
+    const allResults: any[] = [];
+
+    // Process ride_instances (existing logic)
+    const data = riData || [];
+    if (data.length > 0) {
       const matchedRides = data.filter(ri => {
         const route = ri.routes;
         if (!route) return false;
@@ -183,15 +195,11 @@ const Dashboard = () => {
         const pickupToDest = haversineDistanceKm(pickup, { lat: route.destination_lat, lng: route.destination_lng });
         const dropoffToOrigin = haversineDistanceKm(dropoff, { lat: route.origin_lat, lng: route.origin_lng });
         const dropoffToDest = haversineDistanceKm(dropoff, { lat: route.destination_lat, lng: route.destination_lng });
-
-        // Match "go" direction: pickup near origin, dropoff near destination
         const goMatch = pickupToOrigin < 10 && dropoffToDest < 10;
-        // Match "return" direction: pickup near destination, dropoff near origin
         const returnMatch = pickupToDest < 10 && dropoffToOrigin < 10;
         return goMatch || returnMatch;
       });
 
-      // Enrich with driver/shuttle info + ratings
       const driverIds = [...new Set(matchedRides.map(r => r.driver_id))];
       const shuttleIds = [...new Set(matchedRides.map(r => r.shuttle_id))];
       const [{ data: profiles }, { data: shuttles }, { data: ratings }] = await Promise.all([
@@ -203,7 +211,6 @@ const Dashboard = () => {
       (profiles || []).forEach(p => { pMap[p.user_id] = p; });
       const sMap: Record<string, any> = {};
       (shuttles || []).forEach(s => { sMap[s.id] = s; });
-      // Build driver ratings
       const ratingsMap: Record<string, { total: number; count: number }> = {};
       (ratings || []).forEach(r => {
         if (!r.driver_id) return;
@@ -216,10 +223,32 @@ const Dashboard = () => {
         driverRatingsResult[id] = { avg: total / count, count };
       });
       setDriverRatings(driverRatingsResult);
-      setRideInstances(matchedRides.map(r => ({ ...r, driver_profile: pMap[r.driver_id], shuttle_info: sMap[r.shuttle_id] })));
-    } else {
-      setRideInstances([]);
+      allResults.push(...matchedRides.map(r => ({ ...r, _type: 'ride', driver_profile: pMap[r.driver_id], shuttle_info: sMap[r.shuttle_id] })));
     }
+
+    // Process published_trips
+    if (ptData && ptData.length > 0) {
+      const matchedTrips = ptData.filter(pt => {
+        const route = pt.routes;
+        if (!route) return false;
+        const pickupToOrigin = haversineDistanceKm(pickup, { lat: route.origin_lat, lng: route.origin_lng });
+        const pickupToDest = haversineDistanceKm(pickup, { lat: route.destination_lat, lng: route.destination_lng });
+        const dropoffToOrigin = haversineDistanceKm(dropoff, { lat: route.origin_lat, lng: route.origin_lng });
+        const dropoffToDest = haversineDistanceKm(dropoff, { lat: route.destination_lat, lng: route.destination_lng });
+        return (pickupToOrigin < 10 && dropoffToDest < 10) || (pickupToDest < 10 && dropoffToOrigin < 10);
+      });
+      allResults.push(...matchedTrips.map(pt => ({
+        ...pt,
+        _type: 'published',
+        ride_date: pt.trip_date,
+        route_id: pt.route_id,
+        direction: 'go',
+        available_seats: 14,
+        total_seats: 14,
+      })));
+    }
+
+    setRideInstances(allResults);
     setLoadingRides(false);
   };
 
