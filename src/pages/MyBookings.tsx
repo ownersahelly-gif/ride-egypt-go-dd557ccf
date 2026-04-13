@@ -238,6 +238,7 @@ const MyBookings = () => {
 
   const statusColors: Record<string, string> = {
     pending: 'bg-secondary/20 text-secondary',
+    quote_pending: 'bg-amber-100 text-amber-700',
     confirmed: 'bg-green-100 text-green-700',
     boarded: 'bg-primary/10 text-primary',
     completed: 'bg-muted text-muted-foreground',
@@ -292,7 +293,9 @@ const MyBookings = () => {
                         ? (lang === 'ar' ? 'ملغاة' : 'Cancelled')
                         : booking.status === 'boarded' 
                           ? (lang === 'ar' ? 'في الشاتل' : 'On Board')
-                          : t(`booking.status.${booking.status}`)}
+                          : booking.status === 'quote_pending'
+                            ? (lang === 'ar' ? 'بانتظار السعر' : 'Price Pending')
+                            : t(`booking.status.${booking.status}`)}
                     </span>
                   </div>
                   <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
@@ -451,8 +454,36 @@ const MyBookings = () => {
                     );
                   })()}
 
+                  {/* Pickup & Dropoff info */}
+                  {(booking.custom_pickup_name || booking.custom_dropoff_name) && (
+                    <div className="bg-surface rounded-lg p-3 mb-3 space-y-1.5">
+                      {booking.custom_pickup_name && (
+                        <div className="flex items-start gap-2 text-sm">
+                          <MapPin className="w-3.5 h-3.5 text-green-600 shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-[10px] text-muted-foreground">{lang === 'ar' ? 'نقطة الركوب' : 'Pickup'}</p>
+                            <p className="text-foreground text-xs">{booking.custom_pickup_name}</p>
+                          </div>
+                        </div>
+                      )}
+                      {booking.custom_dropoff_name && (
+                        <div className="flex items-start gap-2 text-sm">
+                          <MapPin className="w-3.5 h-3.5 text-red-500 shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-[10px] text-muted-foreground">{lang === 'ar' ? 'نقطة النزول' : 'Dropoff'}</p>
+                            <p className="text-foreground text-xs">{booking.custom_dropoff_name}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-primary">{booking.total_price} EGP</span>
+                    <span className="font-bold text-primary">
+                      {booking.status === 'quote_pending' || (booking.total_price === 0 && booking.status !== 'completed')
+                        ? (lang === 'ar' ? '⏳ بانتظار تأكيد السعر' : '⏳ Price pending confirmation')
+                        : `${booking.total_price} EGP`}
+                    </span>
                     <div className="flex items-center gap-2">
                       {['confirmed', 'boarded'].includes(booking.status) && !isExpired && dp?.phone && (
                         <a href={`tel:${dp.phone}`}>
