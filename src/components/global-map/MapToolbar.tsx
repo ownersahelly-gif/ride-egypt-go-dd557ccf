@@ -63,6 +63,7 @@ const MapToolbar = ({
 }: MapToolbarProps) => {
   const [newPairName, setNewPairName] = useState('');
   const [showZones, setShowZones] = useState(false);
+  const [showRecommender, setShowRecommender] = useState(false);
 
   const toggleDay = (d: number) => {
     const days = filters.days.includes(d) ? filters.days.filter(x => x !== d) : [...filters.days, d];
