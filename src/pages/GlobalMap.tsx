@@ -135,6 +135,22 @@ const GlobalMap = () => {
     return true;
   });
 
+  // Hourly distribution (all non-hidden users, ignoring time filter)
+  const hourlyDistribution = useMemo(() => {
+    const counts: Record<number, number> = {};
+    for (let h = 0; h < 24; h++) counts[h] = 0;
+    allUsers.forEach(u => {
+      if (hiddenUserIds.has(u.id)) return;
+      if (zoneFilteredIds !== null && !zoneFilteredIds.has(u.id)) return;
+      if (filters.days.length > 0 && (u.preferredDays.length === 0 || !filters.days.some(d => u.preferredDays.includes(d)))) return;
+      if (u.preferredTime) {
+        const hour = parseInt(u.preferredTime.split(':')[0], 10);
+        if (!isNaN(hour)) counts[hour]++;
+      }
+    });
+    return Object.entries(counts).map(([h, count]) => ({ hour: Number(h), count }));
+  }, [allUsers, hiddenUserIds, zoneFilteredIds, filters.days]);
+
   // Map click handler
   const handleMapClick = useCallback(async (e: google.maps.MapMouseEvent) => {
     if (!e.latLng) return;
