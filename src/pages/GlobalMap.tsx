@@ -685,6 +685,15 @@ const GlobalMap = () => {
         </div>
       )}
 
+      {/* Connected route info overlay */}
+      {showConnectedRoutes && connectedRouteInfo && (
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 bg-card/95 backdrop-blur border border-border px-5 py-3 rounded-xl shadow-lg flex items-center gap-4">
+          <div className="text-sm font-medium text-foreground">🛣️ {connectedRouteInfo.distance}</div>
+          <div className="text-sm font-medium text-foreground">⏱️ {connectedRouteInfo.duration}</div>
+          <div className="text-xs text-muted-foreground">{filteredUsers.length} users</div>
+        </div>
+      )}
+
       <GoogleMap
         mapContainerStyle={{ width: '100%', height: '100%' }}
         center={cairoCenter}
