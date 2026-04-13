@@ -1199,8 +1199,8 @@ const BookRide = () => {
               </div>
             )}
 
-            {/* InstaPay Payment */}
-            {!useBundle && (
+            {/* InstaPay Payment — skip for published trips */}
+            {!useBundle && selectedRide._type !== 'published' && (
               <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
                 <h3 className="font-semibold text-foreground flex items-center gap-2">
                   <ImageIcon className="w-4 h-4 text-primary" />
@@ -1219,29 +1219,19 @@ const BookRide = () => {
                       </div>
                     </div>
                   )}
-                  <p className="text-xs">{lang === 'ar' ? 'سيتم مراجعة الدفع من قبل المسؤول' : 'Payment will be reviewed by admin'}</p>
                 </div>
-
                 <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePaymentFile} />
-
                 {paymentPreview ? (
                   <div className="space-y-2">
                     <img src={paymentPreview} alt="Payment proof" className="w-full h-48 object-contain rounded-lg border border-border bg-muted" />
                     <Button variant="outline" size="sm" className="w-full" onClick={() => fileInputRef.current?.click()}>
-                      <Upload className="w-4 h-4 me-1" />
-                      {lang === 'ar' ? 'تغيير الصورة' : 'Change Image'}
+                      <Upload className="w-4 h-4 me-1" />{lang === 'ar' ? 'تغيير الصورة' : 'Change Image'}
                     </Button>
                   </div>
                 ) : (
-                  <Button
-                    variant="outline"
-                    className="w-full h-24 border-dashed border-2 flex-col gap-2"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
+                  <Button variant="outline" className="w-full h-24 border-dashed border-2 flex-col gap-2" onClick={() => fileInputRef.current?.click()}>
                     <Upload className="w-6 h-6 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">
-                      {lang === 'ar' ? 'ارفع لقطة شاشة InstaPay' : 'Upload InstaPay Screenshot'}
-                    </span>
+                    <span className="text-sm text-muted-foreground">{lang === 'ar' ? 'ارفع لقطة شاشة InstaPay' : 'Upload InstaPay Screenshot'}</span>
                   </Button>
                 )}
               </div>
@@ -1249,7 +1239,14 @@ const BookRide = () => {
 
             {/* Review & Continue */}
             <div className="bg-card border border-border rounded-2xl p-5">
-              {!isRideFull ? (
+              {selectedRide._type === 'published' ? (
+                <Button className="w-full" size="lg" onClick={() => handleBook(false)}
+                  disabled={loading || !isPickupValid || !isDropoffValid}>
+                  {loading
+                    ? (<><Loader2 className="w-4 h-4 me-1 animate-spin" />{lang === 'ar' ? 'جاري الحجز...' : 'Booking...'}</>)
+                    : (lang === 'ar' ? 'احجز مقعدك — سنتواصل معك بالسعر' : "Book Your Seat — We'll Quote the Price")}
+                </Button>
+              ) : !isRideFull ? (
                 <Button className="w-full" size="lg" onClick={() => setStep('confirm')}
                   disabled={!isPickupValid || !isDropoffValid || (!useBundle && !paymentProof)}>
                   {lang === 'ar' ? 'مراجعة الحجز' : 'Review Booking'}
