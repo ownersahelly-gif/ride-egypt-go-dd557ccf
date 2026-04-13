@@ -829,6 +829,7 @@ const AdminPanel = () => {
 
     toast.success(lang === 'ar' ? 'تم إنشاء المسار المعكوس بنجاح!' : 'Reversed route created successfully!');
     fetchAllData();
+  };
 
   const pendingBookings = bookings.filter(b => b.status === 'pending').sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
   const waitlistBookings = bookings.filter(b => b.status === 'waitlist').sort((a, b) => (a.waitlist_position || 0) - (b.waitlist_position || 0));
