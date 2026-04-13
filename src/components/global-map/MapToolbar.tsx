@@ -97,6 +97,11 @@ const MapToolbar = ({
           <Circle className="w-3.5 h-3.5" />
           Zones {circleZones.length > 0 && `(${pairIds.length})`}
         </Button>
+        {circleZones.length > 0 && (
+          <Button variant={zonesLocked ? 'default' : 'outline'} size="sm" onClick={onToggleZonesLocked} className="gap-1 shrink-0" title={zonesLocked ? 'Unlock zones' : 'Lock zones'}>
+            {zonesLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
+          </Button>
+        )}
         <Button variant={showLines ? 'secondary' : 'outline'} size="sm" onClick={onToggleLines} className="gap-1 shrink-0">
           <Layers className="w-3.5 h-3.5" />
           Lines
