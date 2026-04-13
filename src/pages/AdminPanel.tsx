@@ -1453,7 +1453,55 @@ const AdminPanel = () => {
               </div>
             ) : (
               <div className="space-y-2">
-                {bookings.map(b => (
+                {bookings.filter(b => b.status === 'quote_pending').length > 0 && (
+                  <div className="mb-4">
+                    <h3 className="text-lg font-semibold text-foreground mb-2 flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-secondary" />
+                      {lang === 'ar' ? 'طلبات بانتظار السعر' : 'Quote Pending Requests'}
+                    </h3>
+                    <div className="space-y-2">
+                      {bookings.filter(b => b.status === 'quote_pending').map(b => (
+                        <div key={b.id} className="bg-card border-2 border-secondary/30 rounded-xl p-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <div>
+                              <p className="font-medium text-foreground text-sm">{b.profile?.full_name || 'Unknown'} — {lang === 'ar' ? b.routes?.name_ar : b.routes?.name_en}</p>
+                              <p className="text-xs text-muted-foreground">{b.scheduled_date} · {b.scheduled_time?.slice(0, 5)} · {b.trip_direction}</p>
+                              {b.custom_pickup_name && <p className="text-xs text-muted-foreground">📍 {b.custom_pickup_name} → {b.custom_dropoff_name}</p>}
+                              {b.profile?.phone && <p className="text-xs text-muted-foreground">📞 {b.profile.phone}</p>}
+                            </div>
+                            <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-secondary/20 text-secondary">quote_pending</span>
+                          </div>
+                          <div className="flex gap-2 items-center mt-2">
+                            <Input
+                              type="number"
+                              placeholder={lang === 'ar' ? 'السعر (EGP)' : 'Price (EGP)'}
+                              className="w-32"
+                              id={`price-${b.id}`}
+                            />
+                            <Button size="sm" onClick={async () => {
+                              const priceInput = document.getElementById(`price-${b.id}`) as HTMLInputElement;
+                              const price = parseFloat(priceInput?.value);
+                              if (!price || price <= 0) { toast.error(lang === 'ar' ? 'أدخل سعر صحيح' : 'Enter a valid price'); return; }
+                              await supabase.from('bookings').update({ total_price: price, status: 'pending' }).eq('id', b.id);
+                              toast.success(lang === 'ar' ? 'تم إرسال السعر للعميل' : 'Price sent to customer');
+                              fetchAllData();
+                            }}>
+                              <CheckCircle2 className="w-3.5 h-3.5 me-1" />{lang === 'ar' ? 'إرسال السعر' : 'Send Price'}
+                            </Button>
+                            <Button size="sm" variant="destructive" onClick={async () => {
+                              await supabase.from('bookings').update({ status: 'cancelled' }).eq('id', b.id);
+                              toast.success(lang === 'ar' ? 'تم الرفض' : 'Rejected');
+                              fetchAllData();
+                            }}>
+                              <XCircle className="w-3.5 h-3.5 me-1" />{lang === 'ar' ? 'رفض' : 'Reject'}
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {bookings.filter(b => b.status !== 'quote_pending').map(b => (
                   <div key={b.id} className="bg-card border border-border rounded-xl p-4 flex items-center justify-between">
                     <div>
                       <p className="font-medium text-foreground text-sm">{b.profile?.full_name || 'Unknown'} — {lang === 'ar' ? b.routes?.name_ar : b.routes?.name_en}</p>
@@ -1465,60 +1513,6 @@ const AdminPanel = () => {
                 ))}
               </div>
             )}
-          </div>
-        )}
-
-        {/* Carpool Verifications Tab */}
-        {tab === 'carpool' && (
-          <div className="space-y-6">
-            <h2 className="text-xl font-bold text-foreground">{lang === 'ar' ? 'طلبات التحقق - مشاركة الرحلات' : 'Carpool Verifications'}</h2>
-
-            {carpoolVerifications.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                {lang === 'ar' ? 'لا توجد طلبات تحقق' : 'No verification requests'}
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {carpoolVerifications.map(v => (
-                  <div key={v.id} className="bg-card border border-border rounded-xl p-5">
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <p className="font-bold text-foreground">{carpoolProfiles[v.user_id]?.full_name || 'User'}</p>
-                        <p className="text-xs text-muted-foreground">{carpoolProfiles[v.user_id]?.phone || ''}</p>
-                      </div>
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        v.status === 'approved' ? 'bg-green-100 text-green-700' :
-                        v.status === 'rejected' ? 'bg-destructive/10 text-destructive' :
-                        'bg-secondary/20 text-secondary'
-                      }`}>{v.status}</span>
-            </div>
-
-            {/* Global Stop Waiting Time */}
-            <div className="bg-card border border-border rounded-xl p-6 max-w-lg">
-              <h3 className="font-semibold text-foreground mb-1 flex items-center gap-2">
-                <Clock className="w-5 h-5 text-primary" />
-                {lang === 'ar' ? 'وقت انتظار الباص في المحطة' : 'Bus Waiting Time at Stops'}
-              </h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                {lang === 'ar'
-                  ? 'عدد الدقائق التي ينتظرها الباص في كل محطة (ينطبق على جميع المسارات)'
-                  : 'How many minutes the bus waits at each stop (applies to all routes globally)'}
-              </p>
-              <div className="flex gap-2 items-center">
-                <Input
-                  type="number"
-                  min="1"
-                  max="30"
-                  value={globalWaitingTime}
-                  onChange={(e) => setGlobalWaitingTime(e.target.value)}
-                  className="w-24 font-mono"
-                />
-                <span className="text-sm text-muted-foreground">{lang === 'ar' ? 'دقائق' : 'minutes'}</span>
-                <Button onClick={saveGlobalWaitingTime} disabled={savingWaitingTime}>
-                  {savingWaitingTime ? <Loader2 className="w-4 h-4 animate-spin" /> : (lang === 'ar' ? 'حفظ' : 'Save')}
-                </Button>
-              </div>
-            </div>
                     <div className="grid grid-cols-2 gap-3 mb-3 text-sm">
                       <div><span className="text-muted-foreground">{lang === 'ar' ? 'اللوحة:' : 'Plate:'}</span> <span className="font-medium">{v.license_plate}</span></div>
                       <div><span className="text-muted-foreground">{lang === 'ar' ? 'السيارة:' : 'Vehicle:'}</span> <span className="font-medium">{v.vehicle_model}</span></div>
