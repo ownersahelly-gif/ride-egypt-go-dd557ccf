@@ -1641,6 +1641,12 @@ const AdminPanel = () => {
                     <div>
                       <p className="font-medium text-foreground text-sm">{b.profile?.full_name || 'Unknown'} — {lang === 'ar' ? b.routes?.name_ar : b.routes?.name_en}</p>
                       <p className="text-xs text-muted-foreground">{b.scheduled_date} · {b.scheduled_time} · {b.seats} seat(s) · {b.total_price} EGP</p>
+                      {b.custom_pickup_name && (
+                        <p className="text-xs text-muted-foreground">
+                          📍 {b.custom_pickup_name} → {b.custom_dropoff_name}
+                        </p>
+                      )}
+                      {b.profile?.phone && <p className="text-xs text-muted-foreground">📞 {b.profile.phone}</p>}
                       {b.boarding_code && <p className="text-xs text-muted-foreground font-mono">Code: {b.boarding_code}</p>}
                     </div>
                     <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${statusColors[b.status]}`}>{b.status}</span>
