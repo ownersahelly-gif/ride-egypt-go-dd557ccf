@@ -712,6 +712,8 @@ const GlobalMap = () => {
         onOpenInGoogleMaps={handleOpenInGoogleMaps}
         onFilterCommonDays={() => setFilters(f => ({ ...f, commonDaysOnly: !f.commonDaysOnly }))}
         commonDaysActive={!!filters.commonDaysOnly}
+        zonesLocked={zonesLocked}
+        onToggleZonesLocked={() => setZonesLocked(l => !l)}
       />
 
       <UserSidebar
