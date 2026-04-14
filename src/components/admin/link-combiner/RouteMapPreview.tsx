@@ -37,6 +37,20 @@ const RouteMapPreview = ({ stops, onReorder, lang }: Props) => {
   const [routeLoading, setRouteLoading] = useState(false);
   const [routeDistance, setRouteDistance] = useState<number | null>(null);
   const [routeDuration, setRouteDuration] = useState<number | null>(null);
+  const [initialCenter] = useState<google.maps.LatLngLiteral>(() => {
+    if (stops.length === 0) return { lat: 30.05, lng: 31.25 };
+    const lat = stops.reduce((sum, stop) => sum + stop.lat, 0) / stops.length;
+    const lng = stops.reduce((sum, stop) => sum + stop.lng, 0) / stops.length;
+    return { lat, lng };
+  });
+  const hasInitializedView = useRef(false);
+
+  const handleMapLoad = useCallback((map: google.maps.Map) => {
+    if (hasInitializedView.current) return;
+    hasInitializedView.current = true;
+    map.setCenter(initialCenter);
+    map.setZoom(11);
+  }, [initialCenter]);
 
   // Fetch real road directions whenever stops change
   useEffect(() => {
@@ -94,13 +108,6 @@ const RouteMapPreview = ({ stops, onReorder, lang }: Props) => {
         }
       }
     );
-  }, [stops]);
-
-  const center = useMemo(() => {
-    if (stops.length === 0) return { lat: 30.05, lng: 31.25 };
-    const lat = stops.reduce((s, p) => s + p.lat, 0) / stops.length;
-    const lng = stops.reduce((s, p) => s + p.lng, 0) / stops.length;
-    return { lat, lng };
   }, [stops]);
 
   const straightDistance = useMemo(() => {
