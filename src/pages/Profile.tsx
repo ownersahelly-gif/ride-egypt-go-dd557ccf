@@ -19,7 +19,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { ChevronLeft, ChevronRight, User, Camera, Loader2, Shield, FileText, MapPin, Scale, ChevronRight as ChevronRightIcon, Trash2, AlertTriangle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, User, Camera, Loader2, Shield, FileText, MapPin, Scale, ChevronRight as ChevronRightIcon, Trash2, AlertTriangle, HelpCircle } from 'lucide-react';
 
 const Profile = () => {
   const { user, signOut } = useAuth();
