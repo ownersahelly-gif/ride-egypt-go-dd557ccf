@@ -176,6 +176,26 @@ const RouteMapPreview = ({ stops, onReorder, lang }: Props) => {
     toast.success(lang === 'ar' ? 'تم النسخ!' : 'Copied!');
   };
 
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { error } = await supabase.from('combined_routes' as any).insert({
+        name: routeName.trim() || null,
+        stops_json: stops,
+        final_link: finalLink,
+        created_by: user.id,
+      });
+      if (error) throw error;
+      toast.success(lang === 'ar' ? 'تم حفظ المسار بنجاح!' : 'Route saved successfully!');
+    } catch (err: any) {
+      toast.error(err.message || (lang === 'ar' ? 'فشل في الحفظ' : 'Failed to save'));
+    }
+    setSaving(false);
+  };
+
   return (
     <div className="space-y-4">
       {/* Map */}
