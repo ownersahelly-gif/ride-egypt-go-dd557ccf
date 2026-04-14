@@ -51,11 +51,26 @@ export async function parseGoogleMapsLink(url: string): Promise<{ origin: { lat:
   }
 
   // Extract the path after /dir/
-  const dirMatch = resolvedUrl.match(/\/dir\/(.+?)(?:\/@|$|\?)/);
+  const dirMatch = resolvedUrl.match(/\/dir\/(.+?)(?:\/@|\/data=|$|\?)/);
   if (!dirMatch) return null;
 
   const segments = dirMatch[1].split('/').filter(s => s.trim() !== '');
-  if (segments.length < 2) return null;
+  if (segments.length < 2) {
+    // Try extracting coords from /data= blob as fallback for destination
+    const dataCoords: { lat: number; lng: number }[] = [];
+    let dm: RegExpExecArray | null;
+    const dataRegex = /!3d(-?\d+\.?\d*)!4d(-?\d+\.?\d*)/g;
+    while ((dm = dataRegex.exec(resolvedUrl)) !== null) {
+      dataCoords.push({ lat: parseFloat(dm[1]), lng: parseFloat(dm[2]) });
+    }
+    if (segments.length >= 1 && dataCoords.length > 0) {
+      const origin = await resolveSegment(segments[0]);
+      const destCoord = dataCoords[dataCoords.length - 1];
+      const destination = await resolveSegment(`${destCoord.lat},${destCoord.lng}`);
+      return { origin, destination };
+    }
+    return null;
+  }
 
   const origin = await resolveSegment(segments[0]);
   const destination = await resolveSegment(segments[segments.length - 1]);
