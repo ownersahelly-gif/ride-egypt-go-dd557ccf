@@ -19,6 +19,7 @@ import {
   Copy, ExternalLink
 } from 'lucide-react';
 import PackagePricing from '@/components/admin/PackagePricing';
+import LinkCombiner from '@/components/admin/LinkCombiner';
 
 type AdminTab = 'routes' | 'drivers' | 'shuttles' | 'bookings' | 'analytics' | 'approvals' | 'settings' | 'carpool' | 'users' | 'route_requests' | 'packages' | 'content' | 'refunds' | 'earnings' | 'partners' | 'partner_routes' | 'partner_packages';
 
@@ -1122,6 +1123,8 @@ const AdminPanel = () => {
                 <Plus className="w-4 h-4 me-1" />{lang === 'ar' ? 'مسار جديد' : 'New Route'}
               </Button>
             </div>
+
+            <LinkCombiner lang={lang} />
 
             {showRouteForm && (
               <div className="bg-card border border-border rounded-xl p-6 space-y-4">
