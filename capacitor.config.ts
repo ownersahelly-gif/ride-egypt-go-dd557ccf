@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'Massar',
   webDir: 'dist',
   ios: {
-    contentInset: 'automatic',
+    contentInset: 'never',
     appendedInfoPlist: `
       <key>NSCameraUsageDescription</key>
       <string>Massar needs access to your camera to take a profile photo.</string>
@@ -21,6 +21,11 @@ const config: CapacitorConfig = {
       <false/>
     `,
   },
-};
+  plugins: {
+    Keyboard: {
+      resize: 'none',
+      resizeOnFullScreen: false,
+    },
+  },
 
 export default config;

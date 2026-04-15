@@ -21,7 +21,6 @@ const BottomNav = () => {
       style={{
         height: 'calc(4rem + env(safe-area-inset-bottom, 0px))',
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-        bottom: 'calc(var(--vv-keyboard-inset, 0px) * -1)',
         WebkitTransform: 'translate3d(0,0,0)',
         transform: 'translate3d(0,0,0)',
         backgroundColor: 'hsl(var(--card))',
