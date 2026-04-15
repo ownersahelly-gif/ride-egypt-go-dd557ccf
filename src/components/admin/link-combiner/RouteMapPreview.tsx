@@ -297,7 +297,30 @@ const RouteMapPreview = ({ stops, onReorder, lang }: Props) => {
             }`}
           >
             <GripVertical className="w-3 h-3 text-muted-foreground shrink-0" />
-            <span className="font-mono font-bold text-foreground w-5 shrink-0">{idx + 1}</span>
+            {editingIdx === idx ? (
+              <input
+                autoFocus
+                type="number"
+                min={1}
+                max={stops.length}
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                onBlur={() => handleNumberSubmit(idx)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleNumberSubmit(idx);
+                  if (e.key === 'Escape') setEditingIdx(null);
+                }}
+                className="w-8 h-5 text-center font-mono font-bold text-xs bg-primary/10 border border-primary rounded shrink-0"
+              />
+            ) : (
+              <button
+                onClick={(e) => { e.stopPropagation(); setEditingIdx(idx); setEditValue(String(idx + 1)); }}
+                className="font-mono font-bold text-foreground w-5 shrink-0 hover:bg-primary/10 rounded text-center"
+                title={lang === 'ar' ? 'اضغط لتغيير الترتيب' : 'Click to change position'}
+              >
+                {idx + 1}
+              </button>
+            )}
             <MapPin className={`w-3 h-3 shrink-0 ${stop.type === 'P' ? 'text-emerald-500' : 'text-destructive'}`} />
             <div className="flex-1 min-w-0">
               <span className="truncate block">{stop.name}</span>
