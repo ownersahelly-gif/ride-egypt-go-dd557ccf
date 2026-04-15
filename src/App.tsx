@@ -9,7 +9,6 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import GlobalNotifications from "./components/GlobalNotifications";
 import { useIncomingCall } from "./hooks/useIncomingCall";
-import useViewportStabilizer from "./hooks/useViewportStabilizer";
 // Lazy-load all pages for code splitting
 const Index = React.lazy(() => import("./pages/Index"));
 const Login = React.lazy(() => import("./pages/Login"));
@@ -43,7 +42,6 @@ const queryClient = new QueryClient();
 
 const AppMobileServices = () => {
   useIncomingCall();
-  useViewportStabilizer();
   return null;
 };
 
