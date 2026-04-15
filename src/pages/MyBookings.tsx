@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import MapView from '@/components/MapView';
 import RideChat from '@/components/RideChat';
 import RideRating from '@/components/RideRating';
+import VoiceCall from '@/components/VoiceCall';
 
 /** Haversine distance in km */
 const haversineKm = (a: { lat: number; lng: number }, b: { lat: number; lng: number }) => {
@@ -427,12 +428,8 @@ const MyBookings = () => {
                           {booking.shuttles?.vehicle_model} · {booking.shuttles?.vehicle_plate}
                         </p>
                       </div>
-                      {dp.phone && (
-                        <a href={`tel:${dp.phone}`}>
-                          <Button variant="outline" size="icon" className="rounded-full w-8 h-8">
-                            <Phone className="w-3.5 h-3.5" />
-                          </Button>
-                        </a>
+                      {booking.shuttles?.driver_id && ['confirmed', 'boarded'].includes(booking.status) && !isExpired && (
+                        <VoiceCall tripId={booking.id} userId={booking.shuttles.driver_id} />
                       )}
                     </div>
                   )}
@@ -533,13 +530,8 @@ const MyBookings = () => {
                         : `${booking.total_price} EGP`}
                     </span>
                     <div className="flex items-center gap-2">
-                      {['confirmed', 'boarded'].includes(booking.status) && !isExpired && dp?.phone && (
-                        <a href={`tel:${dp.phone}`}>
-                          <Button variant="outline" size="sm">
-                            <Phone className="w-3.5 h-3.5 me-1" />
-                            {lang === 'ar' ? 'اتصل' : 'Call'}
-                          </Button>
-                        </a>
+                      {['confirmed', 'boarded'].includes(booking.status) && !isExpired && booking.shuttles?.driver_id && (
+                        <VoiceCall tripId={booking.id} userId={booking.shuttles.driver_id} />
                       )}
                       {['confirmed', 'boarded'].includes(booking.status) && !isExpired && (
                         <Button variant="outline" size="sm" className="relative" onClick={() => setChatBookingId(booking.id)}>

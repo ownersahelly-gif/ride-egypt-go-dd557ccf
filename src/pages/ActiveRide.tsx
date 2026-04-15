@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import MapView from '@/components/MapView';
 import RideChat from '@/components/RideChat';
+import VoiceCall from '@/components/VoiceCall';
 import { useToast } from '@/hooks/use-toast';
 import {
   ChevronLeft, ChevronRight, Users, MapPin, MessageCircle,
@@ -863,13 +864,7 @@ const ActiveRide = () => {
                       <div className="flex items-center justify-between">
                         <span className="text-lg font-bold text-foreground">{p.name}</span>
                         <div className="flex items-center gap-2">
-                          {p.phone && (
-                            <a href={`tel:${p.phone}`}>
-                              <Button variant="outline" size="icon" className="h-9 w-9 rounded-full">
-                                <Phone className="w-4 h-4" />
-                              </Button>
-                            </a>
-                          )}
+                          <VoiceCall tripId={p.bookingId} userId={p.userId} />
                           <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setChatBookingId(p.bookingId)}>
                             <MessageCircle className="w-4 h-4" />
                           </Button>

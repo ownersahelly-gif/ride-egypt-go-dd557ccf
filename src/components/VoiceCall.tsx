@@ -133,12 +133,13 @@ const VoiceCall = ({ tripId, userId }: VoiceCallProps) => {
   return (
     <Button
       onClick={startCall}
+      variant="outline"
       size="icon"
-      className="rounded-full bg-green-600 hover:bg-green-700 w-10 h-10"
+      className="rounded-full w-10 h-10"
       disabled={connecting}
       title="Call"
     >
-      <Phone className="w-5 h-5 text-white" />
+      <Phone className="w-5 h-5" />
     </Button>
   );
 };

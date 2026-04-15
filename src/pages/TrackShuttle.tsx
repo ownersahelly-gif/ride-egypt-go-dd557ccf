@@ -12,6 +12,7 @@ import {
   LogOut, AlertTriangle
 } from 'lucide-react';
 import RideChat from '@/components/RideChat';
+import VoiceCall from '@/components/VoiceCall';
 import { useToast } from '@/hooks/use-toast';
 import { useSmoothMarker } from '@/hooks/useSmoothMarker';
 import RideRating from '@/components/RideRating';
@@ -503,16 +504,12 @@ const TrackShuttle = () => {
             <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
               <Users className="w-5 h-5 text-primary" />
             </div>
-            <div className="text-start">
+            <div className="text-start flex-1 min-w-0">
               <p className="font-medium text-foreground text-sm">{driver?.full_name || (lang === 'ar' ? 'السائق' : 'Driver')}</p>
               <p className="text-xs text-muted-foreground">{shuttle?.vehicle_model} · {shuttle?.vehicle_plate}</p>
             </div>
-            {(driverApplication?.phone || driver?.phone) && (
-              <a href={`tel:${driverApplication?.phone || driver?.phone}`}>
-                <Button variant="outline" size="icon" className="rounded-full w-9 h-9">
-                  <Phone className="w-4 h-4" />
-                </Button>
-              </a>
+            {booking?.shuttles?.driver_id && bookingId && ['confirmed', 'boarded'].includes(booking.status) && (
+              <VoiceCall tripId={bookingId} userId={booking.shuttles.driver_id} />
             )}
           </div>
         )}
@@ -592,10 +589,8 @@ const TrackShuttle = () => {
             <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setSosActive(true)}>
               <Shield className="w-4 h-4" />
             </Button>
-            {(driverApplication?.phone || driver?.phone) && (
-              <a href={`tel:${driverApplication?.phone || driver?.phone}`}>
-                <Button variant="ghost" size="icon"><Phone className="w-4 h-4" /></Button>
-              </a>
+            {booking?.shuttles?.driver_id && bookingId && ['confirmed', 'boarded'].includes(booking.status) && (
+              <VoiceCall tripId={bookingId} userId={booking.shuttles.driver_id} />
             )}
             <Button variant="ghost" size="icon" onClick={() => setChatOpen(true)}>
               <MessageCircle className="w-4 h-4" />
