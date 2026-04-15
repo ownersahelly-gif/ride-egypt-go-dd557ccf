@@ -1,6 +1,6 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Ticket, Route, User, Car, Wallet } from 'lucide-react';
-import { useLanguage } from '@/contexts/LanguageContext';
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Home, Ticket, Route, User, Car, Wallet } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const BottomNav = () => {
   const { lang } = useLanguage();
@@ -8,41 +8,48 @@ const BottomNav = () => {
   const navigate = useNavigate();
 
   const tabs = [
-    { path: '/dashboard', icon: Home, labelEn: 'Home', labelAr: 'الرئيسية' },
-    { path: '/my-bookings', icon: Ticket, labelEn: 'Bookings', labelAr: 'حجوزاتي' },
-    { path: '/wallet', icon: Wallet, labelEn: 'Wallet', labelAr: 'المحفظة' },
-    { path: '/carpool', icon: Car, labelEn: 'Carpool', labelAr: 'مشاركة' },
-    { path: '/profile', icon: User, labelEn: 'Profile', labelAr: 'حسابي' },
+    { path: "/dashboard", icon: Home, labelEn: "Home", labelAr: "الرئيسية" },
+    { path: "/my-bookings", icon: Ticket, labelEn: "Bookings", labelAr: "حجوزاتي" },
+    { path: "/wallet", icon: Wallet, labelEn: "Wallet", labelAr: "المحفظة" },
+    { path: "/carpool", icon: Car, labelEn: "Carpool", labelAr: "مشاركة" },
+    { path: "/profile", icon: User, labelEn: "Profile", labelAr: "حسابي" },
   ];
 
   return (
     <nav
       className="fixed bottom-0 left-0 right-0 z-[9999] border-t border-border bg-card"
       style={{
-        height: 'calc(4rem + env(safe-area-inset-bottom, 0px))',
-        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-        WebkitTransform: 'translate3d(0,0,0)',
-        transform: 'translate3d(0,0,0)',
-        backgroundColor: 'hsl(var(--card))',
+        height: "calc(4rem + env(safe-area-inset-bottom, 0px))",
+        paddingBottom: "env(safe-area-inset-bottom, 0px)",
+        WebkitTransform: "translate3d(0,0,0)",
+        transform: "translate3d(0,0,0)",
+        backgroundColor: "hsl(var(--card))",
       }}
     >
-      <div className="grid h-full grid-cols-5">
+      <div className="grid grid-cols-5" style={{ height: "4rem" }}>
         {tabs.map((tab) => {
-          const isActive = location.pathname === tab.path || location.pathname.startsWith(tab.path + '/');
+          const isActive = location.pathname === tab.path || location.pathname.startsWith(tab.path + "/");
           const Icon = tab.icon;
-          const isHome = tab.path === '/dashboard';
+          const isHome = tab.path === "/dashboard";
           return (
             <Link
               key={tab.path}
               to={tab.path}
-              onDoubleClick={isHome ? (e) => { e.preventDefault(); navigate('/admin'); } : undefined}
-              aria-current={isActive ? 'page' : undefined}
+              onDoubleClick={
+                isHome
+                  ? (e) => {
+                      e.preventDefault();
+                      navigate("/admin");
+                    }
+                  : undefined
+              }
+              aria-current={isActive ? "page" : undefined}
               className={`flex h-full min-w-0 flex-col items-center justify-center gap-0.5 px-1 py-2 transition-colors active:scale-[0.98] ${
-                isActive ? 'text-primary' : 'text-muted-foreground'
+                isActive ? "text-primary" : "text-muted-foreground"
               }`}
             >
               <Icon className="w-5 h-5" />
-              <span className="text-[10px] font-medium leading-none">{lang === 'ar' ? tab.labelAr : tab.labelEn}</span>
+              <span className="text-[10px] font-medium leading-none">{lang === "ar" ? tab.labelAr : tab.labelEn}</span>
             </Link>
           );
         })}
