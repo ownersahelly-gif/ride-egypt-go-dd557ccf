@@ -1,21 +1,33 @@
 
-The root cause: on iOS the body/#root are locked with `position: fixed; overflow: hidden` and the Dashboard uses a fixed-height column layout. With Capacitor Keyboard `resize: 'ionic'`, the WebView shrinks correctly, but the Pickup/Dropoff inputs sit inside a non-scrollable card near the middle of the screen, and when focused the browser cannot scroll them into view (the page can't scroll). So the keyboard simply covers them.
+Implement Uber/Careem-style keyboard behavior on Dashboard.
 
-Fix plan (small, focused):
+## Behavior
 
-1. **Make the Dashboard search content scrollable on mobile**
-   - In `src/pages/Dashboard.tsx`, ensure the search step's content area is a real scrollable region (`flex-1 min-h-0 overflow-y-auto` with `WebkitOverflowScrolling: 'touch'`) and add bottom padding equal to keyboard space so inputs can scroll above the keyboard.
+- Keyboard opens → hide map entirely, search panel goes full-height under header, content scrollable.
+- Keyboard closes → only restore map when both pickup AND dropoff are filled (or both are empty = initial state). If exactly one is filled, keep panel expanded so user naturally fills the other.
+- Remove all `--kb-inset` padding hacks from Dashboard.
 
-2. **Auto-scroll focused input into view**
-   - In `src/components/PlacesAutocomplete.tsx`, on input `focus` call `el.scrollIntoView({ block: 'center', behavior: 'smooth' })` after a short delay (waits for keyboard animation). This works for every screen using the component (Dashboard, BookRide, RequestRoute, PartnerDashboard, DriverDashboard, CarpoolPost, AdminPanel) — single change benefits all.
+## Changes
 
-3. **Track keyboard height as a CSS variable on iOS**
-   - Add a small effect in `src/App.tsx` that listens to Capacitor Keyboard `keyboardWillShow` / `keyboardWillHide` events and sets `--kb-inset` on `document.documentElement`. Fallback to `visualViewport` for web.
-   - Use this variable in the Dashboard scroll container as `paddingBottom: calc(var(--kb-inset, 0px) + 1rem)` so the input can actually scroll above the keyboard.
+**`src/pages/Dashboard.tsx`**
+1. Add `const [keyboardOpen, setKeyboardOpen] = useState(false)`.
+2. Add an effect that subscribes to Capacitor `Keyboard.keyboardWillShow` / `keyboardWillHide` (native only), with web `visualViewport` fallback so it still works in the Lovable preview.
+3. Compute `const showMap = !keyboardOpen && ((pickup && dropoff) || (!pickup && !dropoff))`.
+4. Layout (search step):
+   - Header stays at top (unchanged).
+   - Map container: rendered only when `showMap` is true. When hidden, the search panel uses `flex-1` to fill all remaining space below the header.
+   - When `showMap` is true, keep current 50dvh map + search panel split.
+5. Strip any `paddingBottom: var(--kb-inset...)` and `data-keyboard-scroll-container` from the search panel. Inner content gets `overflow-y-auto` so inputs/date/button remain reachable when the panel is full-screen.
 
-4. **Hide the BottomNav while keyboard is open (iOS)**
-   - In `src/components/BottomNav.tsx`, when `--kb-inset > 0` translate the nav off-screen (or `display:none`) so it doesn't sit above the keyboard and steal space.
+**`src/components/PlacesAutocomplete.tsx`**
+- Simplify focus handler: remove the manual scroll-container math. Keep a lightweight `scrollIntoView({ block: 'center' })` after a short delay as a no-op-safe fallback. Native resize + the now-full-screen panel handle visibility.
 
-No changes to `capacitor.config.ts` (keep `resize: 'ionic'`). No new native plugins needed beyond the already-installed `@capacitor/keyboard`.
+**`src/App.tsx`**
+- Keep `--kb-inset` tracking and `data-kb-open` toggle (still used by `BottomNav` to hide itself). No changes required.
 
-After approval I will: edit `src/App.tsx`, `src/components/PlacesAutocomplete.tsx`, `src/components/BottomNav.tsx`, `src/pages/Dashboard.tsx`, then ask you to run `npm run build && npx cap sync ios` and Clean Build in Xcode.
+## Files edited
+- `src/pages/Dashboard.tsx`
+- `src/components/PlacesAutocomplete.tsx`
+
+## After changes
+Run `npm run build && npx cap sync ios`, then Product → Clean Build Folder in Xcode and rebuild to device.
