@@ -143,20 +143,26 @@ const MapView = ({
       return timeoutId;
     };
 
-    const retryDelays = isNativeApp ? [0, 150, 400, 900] : [0];
-    const timeouts = retryDelays.map(fitWithRetry);
-    const idleListener = isNativeApp
-      ? google.maps.event.addListenerOnce(mapRef, 'idle', () => {
-          google.maps.event.trigger(mapRef, 'resize');
-          applyBounds();
-        })
-      : null;
+    // Fit once. On native we add a single fallback retry only if the container
+    // wasn't measured yet on the first try — never re-fit after the camera has
+    // already settled (that caused the iOS jitter/lag after pressing search).
+    const fittedRef = { current: false };
+    const tryFit = () => {
+      if (fittedRef.current) return;
+      if (applyBounds()) {
+        fittedRef.current = true;
+      }
+    };
+
+    const timeouts: number[] = [];
+    timeouts.push(window.setTimeout(tryFit, 0));
+    if (isNativeApp) {
+      timeouts.push(window.setTimeout(tryFit, 250));
+      timeouts.push(window.setTimeout(tryFit, 700));
+    }
 
     return () => {
       timeouts.forEach((timeoutId) => window.clearTimeout(timeoutId));
-      if (idleListener) {
-        google.maps.event.removeListener(idleListener);
-      }
     };
   }, [isLoaded, isNativeApp, mapRef, origin?.lat, origin?.lng, destination?.lat, destination?.lng, JSON.stringify(markers), JSON.stringify(waypoints)]);
 
