@@ -1115,6 +1115,8 @@ const Dashboard = () => {
                 onSelect={(place) => setPickup(place)}
                 value={pickup?.name || ""}
                 iconColor="text-green-500"
+                showCurrentLocation
+                currentLocationLabel={lang === "ar" ? "استخدم موقعي الحالي" : "Use my current location"}
               />
               <PlacesAutocomplete
                 placeholder={lang === "ar" ? "إلى أين؟ (نقطة النزول)" : "To where? (Dropoff)"}
