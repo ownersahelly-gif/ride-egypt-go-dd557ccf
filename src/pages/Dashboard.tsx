@@ -1062,7 +1062,7 @@ const Dashboard = () => {
       )}
 
       <div ref={mapContainerRef} className="flex-1 min-h-0 relative bg-muted">
-        {showMap ? (
+        {mapLoaded ? (
           <Suspense
             fallback={
               <div className="flex h-full w-full items-center justify-center text-muted-foreground">
