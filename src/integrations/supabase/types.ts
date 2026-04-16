@@ -555,6 +555,42 @@ export type Database = {
           },
         ]
       }
+      community_requests: {
+        Row: {
+          admin_notes: string | null
+          contact: string | null
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          contact?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          contact?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       community_verification_answers: {
         Row: {
           answer_file_url: string | null
