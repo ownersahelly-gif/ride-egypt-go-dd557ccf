@@ -61,6 +61,35 @@ const Carpool = () => {
   const [sortBy, setSortBy] = useState<string>('recent');
   const [showFilters, setShowFilters] = useState(false);
 
+  // Request a community
+  const [requestOpen, setRequestOpen] = useState(false);
+  const [reqName, setReqName] = useState('');
+  const [reqDescription, setReqDescription] = useState('');
+  const [reqContact, setReqContact] = useState('');
+  const [reqSubmitting, setReqSubmitting] = useState(false);
+
+  const submitCommunityRequest = async () => {
+    if (!user || !reqName.trim()) return;
+    setReqSubmitting(true);
+    const { error } = await supabase.from('community_requests').insert({
+      user_id: user.id,
+      name: reqName.trim(),
+      description: reqDescription.trim() || null,
+      contact: reqContact.trim() || null,
+    });
+    setReqSubmitting(false);
+    if (error) {
+      toast({ title: lang === 'ar' ? 'خطأ' : 'Error', description: error.message, variant: 'destructive' });
+      return;
+    }
+    toast({
+      title: lang === 'ar' ? 'تم الإرسال' : 'Request sent',
+      description: lang === 'ar' ? 'سيراجع الإدمن طلبك قريباً' : 'Admins will review your request soon.',
+    });
+    setRequestOpen(false);
+    setReqName(''); setReqDescription(''); setReqContact('');
+  };
+
   // Get user location on mount
   useEffect(() => {
     if (navigator.geolocation) {
