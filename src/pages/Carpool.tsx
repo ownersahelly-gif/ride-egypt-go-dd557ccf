@@ -579,7 +579,7 @@ const Carpool = () => {
           </>
         )}
 
-        {tab === 'my-rides' && (
+        {!loading && approvedCommunityCount > 0 && tab === 'my-rides' && (
           <>
             {myRequests.length === 0 ? (
               <div className="text-center py-12">
@@ -614,7 +614,7 @@ const Carpool = () => {
           </>
         )}
 
-        {tab === 'my-routes' && (
+        {!loading && approvedCommunityCount > 0 && tab === 'my-routes' && (
           <>
             {myRoutes.length === 0 ? (
               <div className="text-center py-12">
