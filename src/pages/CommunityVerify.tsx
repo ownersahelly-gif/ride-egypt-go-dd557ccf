@@ -36,6 +36,8 @@ export default function CommunityVerify() {
       global: { headers: { Authorization: `Bearer ${session.access_token}` } },
     });
   }, [session?.access_token]);
+
+  useEffect(() => {
     if (!user || !communityId) return;
     Promise.all([
       supabase.from('communities').select('*').eq('id', communityId).maybeSingle(),
