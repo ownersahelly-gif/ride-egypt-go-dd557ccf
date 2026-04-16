@@ -270,6 +270,23 @@ const PlacesAutocomplete = ({
         }}
       />
 
+      {showCurrentLocation && (
+        <button
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => void handleUseCurrentLocation()}
+          disabled={locating}
+          className="mt-1.5 inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-muted disabled:opacity-60"
+        >
+          {locating ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <LocateFixed className="h-3.5 w-3.5" />
+          )}
+          {currentLocationLabel}
+        </button>
+      )}
+
       {showDropdown && predictions.length > 0 && (
         <div className="absolute z-50 top-full mt-1 w-full max-h-60 overflow-y-auto rounded-lg border border-border bg-card shadow-lg">
           {predictions.map((p) => (
