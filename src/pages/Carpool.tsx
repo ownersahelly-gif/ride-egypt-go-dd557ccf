@@ -654,6 +654,57 @@ const Carpool = () => {
         )}
       </div>
 
+      <Dialog open={requestOpen} onOpenChange={setRequestOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{lang === 'ar' ? 'طلب مجتمع جديد' : 'Request a new community'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <label className="text-sm font-medium mb-1 block">
+                {lang === 'ar' ? 'اسم المجتمع' : 'Community name'} <span className="text-destructive">*</span>
+              </label>
+              <Input
+                value={reqName}
+                onChange={e => setReqName(e.target.value)}
+                placeholder={lang === 'ar' ? 'مثال: AUC, GUC, مجمع سكني' : 'e.g. AUC, GUC, residential compound'}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">
+                {lang === 'ar' ? 'وصف المجتمع' : 'Description'}
+              </label>
+              <Textarea
+                value={reqDescription}
+                onChange={e => setReqDescription(e.target.value)}
+                placeholder={lang === 'ar' ? 'ما هذا المجتمع؟ كم العدد؟' : 'What is this community? How many people?'}
+                rows={3}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">
+                {lang === 'ar' ? 'بيانات تواصل (اختياري)' : 'Contact info (optional)'}
+              </label>
+              <Input
+                value={reqContact}
+                onChange={e => setReqContact(e.target.value)}
+                placeholder={lang === 'ar' ? 'هاتف أو بريد إلكتروني' : 'Phone or email'}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRequestOpen(false)} disabled={reqSubmitting}>
+              {lang === 'ar' ? 'إلغاء' : 'Cancel'}
+            </Button>
+            <Button onClick={submitCommunityRequest} disabled={reqSubmitting || !reqName.trim()}>
+              {reqSubmitting
+                ? (lang === 'ar' ? 'جاري الإرسال...' : 'Sending...')
+                : (lang === 'ar' ? 'إرسال للمراجعة' : 'Send for review')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <BottomNav />
     </div>
   );
