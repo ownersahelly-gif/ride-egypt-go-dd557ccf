@@ -382,7 +382,12 @@ const MapView = ({
             title="Your location"
           />
         )}
-        {directions && <DirectionsRenderer directions={directions} options={{ suppressMarkers: true }} />}
+        {directions && (
+          <DirectionsRenderer
+            directions={directions}
+            options={{ suppressMarkers: true, preserveViewport: true }}
+          />
+        )}
         {connectionLine && (
           <Polyline
             path={[connectionLine.from, connectionLine.to]}
