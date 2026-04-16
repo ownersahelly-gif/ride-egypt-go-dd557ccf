@@ -301,10 +301,16 @@ const Carpool = () => {
                     ? 'الرحلات خاصة بأعضاء كل مجتمع. تقدّم للانضمام لرؤية ونشر الرحلات.'
                     : 'Carpool rides are private to each community. Apply to join one to browse and post rides.'}
                 </p>
-                <Button size="sm" className="mt-2" onClick={() => navigate('/communities')}>
-                  <Building2 className="w-3.5 h-3.5 mr-1" />
-                  {lang === 'ar' ? 'استكشاف المجتمعات' : 'Browse communities'}
-                </Button>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  <Button size="sm" onClick={() => navigate('/communities')}>
+                    <Building2 className="w-3.5 h-3.5 mr-1" />
+                    {lang === 'ar' ? 'استكشاف المجتمعات' : 'Browse communities'}
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => setRequestOpen(true)}>
+                    <Plus className="w-3.5 h-3.5 mr-1" />
+                    {lang === 'ar' ? 'طلب مجتمع جديد' : 'Request a community'}
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
