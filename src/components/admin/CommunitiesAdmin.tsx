@@ -120,11 +120,13 @@ export default function CommunitiesAdmin({ lang }: { lang: 'en' | 'ar' }) {
       return;
     }
 
-    const [cRes, qRes, mRes] = await Promise.all([
+    const [cRes, qRes, mRes, rRes] = await Promise.all([
       adminClient.from('communities').select('*').order('created_at', { ascending: false }),
       adminClient.from('community_verification_questions').select('*').order('sort_order'),
       adminClient.from('community_memberships').select('*').order('created_at', { ascending: false }),
+      adminClient.from('community_requests').select('*').order('created_at', { ascending: false }),
     ]);
+    setCommunityRequests(rRes.data || []);
     const cs = ((cRes.data || []) as Community[]).map((community) => ({
       ...community,
       allowed_modes: normalizeModes(community.allowed_modes),
