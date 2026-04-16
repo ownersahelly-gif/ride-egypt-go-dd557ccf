@@ -75,6 +75,7 @@ export default function CommunitiesAdmin({ lang }: { lang: 'en' | 'ar' }) {
   const [editing, setEditing] = useState<Community | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [communityRequests, setCommunityRequests] = useState<any[]>([]);
 
   // Community form state
   const [form, setForm] = useState({
@@ -119,11 +120,13 @@ export default function CommunitiesAdmin({ lang }: { lang: 'en' | 'ar' }) {
       return;
     }
 
-    const [cRes, qRes, mRes] = await Promise.all([
+    const [cRes, qRes, mRes, rRes] = await Promise.all([
       adminClient.from('communities').select('*').order('created_at', { ascending: false }),
       adminClient.from('community_verification_questions').select('*').order('sort_order'),
       adminClient.from('community_memberships').select('*').order('created_at', { ascending: false }),
+      adminClient.from('community_requests').select('*').order('created_at', { ascending: false }),
     ]);
+    setCommunityRequests(rRes.data || []);
     const cs = ((cRes.data || []) as Community[]).map((community) => ({
       ...community,
       allowed_modes: normalizeModes(community.allowed_modes),
@@ -324,6 +327,83 @@ export default function CommunitiesAdmin({ lang }: { lang: 'en' | 'ar' }) {
                 ? `${pendingMemberships.length} طلب انضمام في الانتظار`
                 : `${pendingMemberships.length} pending membership request${pendingMemberships.length === 1 ? '' : 's'}`}
             </span>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Community requests from users */}
+      {communityRequests.filter(r => r.status === 'pending').length > 0 && (
+        <Card>
+          <CardContent className="p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <Plus className="w-4 h-4 text-primary" />
+              <h3 className="font-semibold text-sm">
+                {lang === 'ar' ? 'طلبات مجتمعات جديدة من المستخدمين' : 'New community requests from users'}
+              </h3>
+              <Badge variant="secondary">{communityRequests.filter(r => r.status === 'pending').length}</Badge>
+            </div>
+            <div className="space-y-2">
+              {communityRequests.filter(r => r.status === 'pending').map(req => (
+                <div key={req.id} className="border border-border rounded-lg p-3 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-sm">{req.name}</p>
+                      {req.description && <p className="text-xs text-muted-foreground mt-0.5">{req.description}</p>}
+                      {req.contact && <p className="text-xs text-muted-foreground mt-0.5">📞 {req.contact}</p>}
+                      <p className="text-[10px] text-muted-foreground mt-1">
+                        {profiles[req.user_id]?.full_name || req.user_id.slice(0, 8)} · {new Date(req.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        setEditing(null);
+                        setForm({
+                          name_en: req.name, name_ar: req.name,
+                          description_en: req.description || '', description_ar: req.description || '',
+                          logo_url: '', allowed_modes: ['car_sharing', 'paid'],
+                          status: 'active',
+                        });
+                        setShowForm(true);
+                      }}
+                    >
+                      <Plus className="w-3 h-3 mr-1" />
+                      {lang === 'ar' ? 'إنشاء مجتمع' : 'Create community'}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={async () => {
+                        const ac = getAdminClient();
+                        if (!ac) return;
+                        await ac.from('community_requests').update({ status: 'approved' }).eq('id', req.id);
+                        toast({ title: lang === 'ar' ? 'تم وضع علامة مكتمل' : 'Marked done' });
+                        fetchAll();
+                      }}
+                    >
+                      <CheckCircle2 className="w-3 h-3 mr-1" />
+                      {lang === 'ar' ? 'تم' : 'Done'}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={async () => {
+                        const ac = getAdminClient();
+                        if (!ac) return;
+                        await ac.from('community_requests').update({ status: 'rejected' }).eq('id', req.id);
+                        toast({ title: lang === 'ar' ? 'تم الرفض' : 'Rejected' });
+                        fetchAll();
+                      }}
+                    >
+                      <XCircle className="w-3 h-3 mr-1" />
+                      {lang === 'ar' ? 'رفض' : 'Dismiss'}
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
       )}

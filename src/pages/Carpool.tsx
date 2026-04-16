@@ -15,11 +15,15 @@ import {
   Map, List, X, Navigation, Building2
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import PlacesAutocomplete from '@/components/PlacesAutocomplete';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from '@/components/ui/dialog';
 
 function getDistanceKm(lat1: number, lng1: number, lat2: number, lng2: number) {
   const R = 6371;
@@ -56,6 +60,35 @@ const Carpool = () => {
   const [filterDay, setFilterDay] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('recent');
   const [showFilters, setShowFilters] = useState(false);
+
+  // Request a community
+  const [requestOpen, setRequestOpen] = useState(false);
+  const [reqName, setReqName] = useState('');
+  const [reqDescription, setReqDescription] = useState('');
+  const [reqContact, setReqContact] = useState('');
+  const [reqSubmitting, setReqSubmitting] = useState(false);
+
+  const submitCommunityRequest = async () => {
+    if (!user || !reqName.trim()) return;
+    setReqSubmitting(true);
+    const { error } = await supabase.from('community_requests').insert({
+      user_id: user.id,
+      name: reqName.trim(),
+      description: reqDescription.trim() || null,
+      contact: reqContact.trim() || null,
+    });
+    setReqSubmitting(false);
+    if (error) {
+      toast({ title: lang === 'ar' ? 'خطأ' : 'Error', description: error.message, variant: 'destructive' });
+      return;
+    }
+    toast({
+      title: lang === 'ar' ? 'تم الإرسال' : 'Request sent',
+      description: lang === 'ar' ? 'سيراجع الإدمن طلبك قريباً' : 'Admins will review your request soon.',
+    });
+    setRequestOpen(false);
+    setReqName(''); setReqDescription(''); setReqContact('');
+  };
 
   // Get user location on mount
   useEffect(() => {
@@ -268,16 +301,22 @@ const Carpool = () => {
                     ? 'الرحلات خاصة بأعضاء كل مجتمع. تقدّم للانضمام لرؤية ونشر الرحلات.'
                     : 'Carpool rides are private to each community. Apply to join one to browse and post rides.'}
                 </p>
-                <Button size="sm" className="mt-2" onClick={() => navigate('/communities')}>
-                  <Building2 className="w-3.5 h-3.5 mr-1" />
-                  {lang === 'ar' ? 'استكشاف المجتمعات' : 'Browse communities'}
-                </Button>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  <Button size="sm" onClick={() => navigate('/communities')}>
+                    <Building2 className="w-3.5 h-3.5 mr-1" />
+                    {lang === 'ar' ? 'استكشاف المجتمعات' : 'Browse communities'}
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => setRequestOpen(true)}>
+                    <Plus className="w-3.5 h-3.5 mr-1" />
+                    {lang === 'ar' ? 'طلب مجتمع جديد' : 'Request a community'}
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
         )}
 
-        {tab === 'browse' && (
+        {!loading && approvedCommunityCount > 0 && tab === 'browse' && (
           <>
             {/* Search From / To */}
             <div className="space-y-2">
@@ -540,7 +579,7 @@ const Carpool = () => {
           </>
         )}
 
-        {tab === 'my-rides' && (
+        {!loading && approvedCommunityCount > 0 && tab === 'my-rides' && (
           <>
             {myRequests.length === 0 ? (
               <div className="text-center py-12">
@@ -575,7 +614,7 @@ const Carpool = () => {
           </>
         )}
 
-        {tab === 'my-routes' && (
+        {!loading && approvedCommunityCount > 0 && tab === 'my-routes' && (
           <>
             {myRoutes.length === 0 ? (
               <div className="text-center py-12">
@@ -614,6 +653,57 @@ const Carpool = () => {
           </>
         )}
       </div>
+
+      <Dialog open={requestOpen} onOpenChange={setRequestOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{lang === 'ar' ? 'طلب مجتمع جديد' : 'Request a new community'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <label className="text-sm font-medium mb-1 block">
+                {lang === 'ar' ? 'اسم المجتمع' : 'Community name'} <span className="text-destructive">*</span>
+              </label>
+              <Input
+                value={reqName}
+                onChange={e => setReqName(e.target.value)}
+                placeholder={lang === 'ar' ? 'مثال: AUC, GUC, مجمع سكني' : 'e.g. AUC, GUC, residential compound'}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">
+                {lang === 'ar' ? 'وصف المجتمع' : 'Description'}
+              </label>
+              <Textarea
+                value={reqDescription}
+                onChange={e => setReqDescription(e.target.value)}
+                placeholder={lang === 'ar' ? 'ما هذا المجتمع؟ كم العدد؟' : 'What is this community? How many people?'}
+                rows={3}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">
+                {lang === 'ar' ? 'بيانات تواصل (اختياري)' : 'Contact info (optional)'}
+              </label>
+              <Input
+                value={reqContact}
+                onChange={e => setReqContact(e.target.value)}
+                placeholder={lang === 'ar' ? 'هاتف أو بريد إلكتروني' : 'Phone or email'}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRequestOpen(false)} disabled={reqSubmitting}>
+              {lang === 'ar' ? 'إلغاء' : 'Cancel'}
+            </Button>
+            <Button onClick={submitCommunityRequest} disabled={reqSubmitting || !reqName.trim()}>
+              {reqSubmitting
+                ? (lang === 'ar' ? 'جاري الإرسال...' : 'Sending...')
+                : (lang === 'ar' ? 'إرسال للمراجعة' : 'Send for review')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <BottomNav />
     </div>
