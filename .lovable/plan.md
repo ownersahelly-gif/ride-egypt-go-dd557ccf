@@ -20,14 +20,4 @@ Implement Uber/Careem-style keyboard behavior on Dashboard.
 5. Strip any `paddingBottom: var(--kb-inset...)` and `data-keyboard-scroll-container` from the search panel. Inner content gets `overflow-y-auto` so inputs/date/button remain reachable when the panel is full-screen.
 
 **`src/components/PlacesAutocomplete.tsx`**
-- Simplify focus handler: remove the manual scroll-container math. Keep a lightweight `scrollIntoView({ block: 'center' })` after a short delay as a no-op-safe fallback. Native resize + the now-full-screen panel handle visibility.
-
-**`src/App.tsx`**
-- Keep `--kb-inset` tracking and `data-kb-open` toggle (still used by `BottomNav` to hide itself). No changes required.
-
-## Files edited
-- `src/pages/Dashboard.tsx`
-- `src/components/PlacesAutocomplete.tsx`
-
-## After changes
-Run `npm run build && npx cap sync ios`, then Product → Clean Build Folder in Xcode and rebuild to device.
+- Simplify focus handler: remove the manual scroll-container math. Keep a lightweight `scrollIntoView({ block: 'center' })` after
