@@ -1061,7 +1061,10 @@ const Dashboard = () => {
         </Link>
       )}
 
-      <div ref={mapContainerRef} className="flex-1 min-h-0 relative bg-muted">
+      <div
+        ref={mapContainerRef}
+        className={`${mapVisible ? "flex-1 min-h-0" : "hidden"} relative bg-muted`}
+      >
         {mapLoaded ? (
           <Suspense
             fallback={
@@ -1111,13 +1114,10 @@ const Dashboard = () => {
       </div>
 
       <div
-        data-keyboard-scroll-container
-        className="shrink-0 overflow-y-auto bg-card border-t border-border"
+        className={`${mapVisible ? "shrink-0" : "flex-1 min-h-0"} overflow-y-auto bg-card border-t border-border`}
         style={{
-          maxHeight: "50dvh",
+          maxHeight: mapVisible ? "50dvh" : undefined,
           paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1rem)",
-          scrollPaddingTop: "4rem",
-          scrollPaddingBottom: "8rem",
           WebkitOverflowScrolling: "touch",
         }}
       >
