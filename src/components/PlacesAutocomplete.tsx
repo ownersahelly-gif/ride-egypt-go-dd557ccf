@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Input } from '@/components/ui/input';
-import { MapPin, Loader2 } from 'lucide-react';
+import { Loader2, LocateFixed, MapPin } from 'lucide-react';
+import { toast } from 'sonner';
 
 const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 
@@ -58,15 +59,27 @@ interface PlacesAutocompleteProps {
   onSelect: (place: { name: string; lat: number; lng: number }) => void;
   iconColor?: string;
   className?: string;
+  showCurrentLocation?: boolean;
+  currentLocationLabel?: string;
 }
 
-const PlacesAutocomplete = ({ placeholder, value, onSelect, iconColor = 'text-primary', className }: PlacesAutocompleteProps) => {
+const PlacesAutocomplete = ({
+  placeholder,
+  value,
+  onSelect,
+  iconColor = 'text-primary',
+  className,
+  showCurrentLocation = false,
+  currentLocationLabel = 'Use my current location',
+}: PlacesAutocompleteProps) => {
   const [inputValue, setInputValue] = useState(value || '');
   const [predictions, setPredictions] = useState<google.maps.places.AutocompletePrediction[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [loadingApi, setLoadingApi] = useState(false);
+  const [locating, setLocating] = useState(false);
   const autocompleteService = useRef<google.maps.places.AutocompleteService | null>(null);
   const placesService = useRef<google.maps.places.PlacesService | null>(null);
+  const geocoder = useRef<google.maps.Geocoder | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<number | null>(null);
   const mountedRef = useRef(true);
@@ -169,6 +182,47 @@ const PlacesAutocomplete = ({ placeholder, value, onSelect, iconColor = 'text-pr
     );
   };
 
+  const handleUseCurrentLocation = async () => {
+    if (!('geolocation' in navigator)) {
+      toast.error('Location is not available on this device');
+      return;
+    }
+    setLocating(true);
+    setShowDropdown(false);
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        let name = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+
+        const ready = await ensureGoogleReady();
+        if (ready && window.google?.maps) {
+          if (!geocoder.current) geocoder.current = new google.maps.Geocoder();
+          try {
+            const result = await geocoder.current.geocode({ location: { lat, lng } });
+            if (result.results?.[0]?.formatted_address) {
+              name = result.results[0].formatted_address;
+            }
+          } catch {
+            // keep coordinate fallback
+          }
+        }
+
+        if (!mountedRef.current) return;
+        setInputValue(name);
+        setLocating(false);
+        onSelect({ name, lat, lng });
+      },
+      (err) => {
+        if (!mountedRef.current) return;
+        setLocating(false);
+        toast.error(err.code === err.PERMISSION_DENIED ? 'Location permission denied' : 'Could not get your location');
+      },
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  };
+
   if (!GOOGLE_MAPS_KEY) {
     return (
       <div className="relative">
@@ -215,6 +269,23 @@ const PlacesAutocomplete = ({ placeholder, value, onSelect, iconColor = 'text-pr
           }, 350);
         }}
       />
+
+      {showCurrentLocation && (
+        <button
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => void handleUseCurrentLocation()}
+          disabled={locating}
+          className="mt-1.5 inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-muted disabled:opacity-60"
+        >
+          {locating ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <LocateFixed className="h-3.5 w-3.5" />
+          )}
+          {currentLocationLabel}
+        </button>
+      )}
 
       {showDropdown && predictions.length > 0 && (
         <div className="absolute z-50 top-full mt-1 w-full max-h-60 overflow-y-auto rounded-lg border border-border bg-card shadow-lg">
