@@ -45,6 +45,9 @@ const CarpoolPost = () => {
   const [seats, setSeats] = useState(3);
   const [isDaily, setIsDaily] = useState(false);
   const [daysOfWeek, setDaysOfWeek] = useState<number[]>([]);
+  // Per-day overrides: { [dayIdx]: { departure: 'HH:MM', return: 'HH:MM' } }
+  const [dayOverrides, setDayOverrides] = useState<Record<number, { departure?: string; return?: string }>>({});
+  const [customizePerDay, setCustomizePerDay] = useState(false);
   const [shareFuel, setShareFuel] = useState(false);
   const [fuelAmount, setFuelAmount] = useState('');
   const [allowSwap, setAllowSwap] = useState(false);
