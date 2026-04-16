@@ -389,33 +389,69 @@ const RouteMapPreview = ({ stops, onReorder, lang }: Props) => {
         ))}
       </div>
 
-      {/* Add stop button */}
-      <div className="flex items-center gap-2">
-        <Button
-          size="sm"
-          variant={addingStop ? 'default' : 'outline'}
-          onClick={() => setAddingStop(!addingStop)}
-          className="gap-1.5"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          {addingStop
-            ? (lang === 'ar' ? 'إلغاء' : 'Cancel')
-            : (lang === 'ar' ? 'إضافة محطة' : 'Add Stop')}
-        </Button>
-        {addingStop && (
-          <div className="flex items-center gap-1 text-xs">
-            <button
-              onClick={() => setAddStopType('P')}
-              className={`px-2 py-0.5 rounded ${addStopType === 'P' ? 'bg-emerald-500 text-white' : 'bg-muted text-muted-foreground'}`}
-            >
-              {lang === 'ar' ? 'التقاط' : 'Pickup'}
-            </button>
-            <button
-              onClick={() => setAddStopType('D')}
-              className={`px-2 py-0.5 rounded ${addStopType === 'D' ? 'bg-destructive text-white' : 'bg-muted text-muted-foreground'}`}
-            >
-              {lang === 'ar' ? 'توصيل' : 'Dropoff'}
-            </button>
+      {/* Add stop section */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant={addingStop ? 'default' : 'outline'}
+            onClick={() => { setAddingStop(!addingStop); setAddStopMode('map'); }}
+            className="gap-1.5"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            {addingStop
+              ? (lang === 'ar' ? 'إلغاء' : 'Cancel')
+              : (lang === 'ar' ? 'إضافة محطة' : 'Add Stop')}
+          </Button>
+          {addingStop && (
+            <>
+              <div className="flex items-center gap-1 text-xs">
+                <button
+                  onClick={() => setAddStopMode('map')}
+                  className={`px-2 py-0.5 rounded ${addStopMode === 'map' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
+                >
+                  {lang === 'ar' ? 'خريطة' : 'Map'}
+                </button>
+                <button
+                  onClick={() => setAddStopMode('link')}
+                  className={`px-2 py-0.5 rounded ${addStopMode === 'link' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
+                >
+                  <Link2 className="w-3 h-3 inline-block me-1" />
+                  {lang === 'ar' ? 'رابط' : 'Link'}
+                </button>
+              </div>
+              {addStopMode === 'map' && (
+                <div className="flex items-center gap-1 text-xs">
+                  <button
+                    onClick={() => setAddStopType('P')}
+                    className={`px-2 py-0.5 rounded ${addStopType === 'P' ? 'bg-emerald-500 text-white' : 'bg-muted text-muted-foreground'}`}
+                  >
+                    {lang === 'ar' ? 'التقاط' : 'Pickup'}
+                  </button>
+                  <button
+                    onClick={() => setAddStopType('D')}
+                    className={`px-2 py-0.5 rounded ${addStopType === 'D' ? 'bg-destructive text-white' : 'bg-muted text-muted-foreground'}`}
+                  >
+                    {lang === 'ar' ? 'توصيل' : 'Dropoff'}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+        {addingStop && addStopMode === 'link' && (
+          <div className="flex gap-2">
+            <Input
+              className="flex-1 text-xs"
+              placeholder={lang === 'ar' ? 'الصق رابط Google Maps هنا...' : 'Paste a Google Maps link here...'}
+              value={linkInput}
+              onChange={e => setLinkInput(e.target.value)}
+              disabled={linkParsing}
+              onKeyDown={e => { if (e.key === 'Enter' && linkInput.trim()) handleAddViaLink(); }}
+            />
+            <Button size="sm" disabled={!linkInput.trim() || linkParsing} onClick={handleAddViaLink}>
+              {linkParsing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+            </Button>
           </div>
         )}
       </div>
