@@ -15,11 +15,15 @@ import {
   Map, List, X, Navigation, Building2
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import PlacesAutocomplete from '@/components/PlacesAutocomplete';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from '@/components/ui/dialog';
 
 function getDistanceKm(lat1: number, lng1: number, lat2: number, lng2: number) {
   const R = 6371;
