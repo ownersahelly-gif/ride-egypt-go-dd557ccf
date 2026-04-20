@@ -1044,8 +1044,10 @@ const Dashboard = () => {
 
       <div
         className={cn(
-          "relative bg-muted",
-          !mapVisible ? "hidden" : "flex-1 min-h-[300px]",
+          "relative bg-muted shrink-0",
+          !mapVisible && "hidden",
+          mapVisible && step === "search" && "h-[40dvh] min-h-[240px]",
+          mapVisible && step !== "search" && "flex-1 min-h-[300px]",
         )}
       >
         <Suspense
