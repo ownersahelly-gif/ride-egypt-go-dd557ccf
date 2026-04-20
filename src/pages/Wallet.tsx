@@ -21,6 +21,7 @@ const Wallet = () => {
   const [expiredPurchases, setExpiredPurchases] = useState<any[]>([]);
   const [refunds, setRefunds] = useState<any[]>([]);
   const [routes, setRoutes] = useState<Record<string, any>>({});
+  const [availableBundles, setAvailableBundles] = useState<any[]>([]);
 
   useEffect(() => {
     if (!user) return;
@@ -31,11 +32,13 @@ const Wallet = () => {
         { data: purchases },
         { data: refs },
         { data: routeList },
+        { data: bundles },
       ] = await Promise.all([
         supabase.from('profiles').select('*').eq('user_id', user.id).single(),
         supabase.from('bundle_purchases').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
         supabase.from('refunds').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
         supabase.from('routes').select('id, name_en, name_ar'),
+        supabase.from('ride_bundles').select('*').eq('is_active', true).order('price'),
       ]);
       setProfile(prof);
       const now = new Date().toISOString();
@@ -45,6 +48,7 @@ const Wallet = () => {
       const rm: Record<string, any> = {};
       (routeList || []).forEach(r => { rm[r.id] = r; });
       setRoutes(rm);
+      setAvailableBundles(bundles || []);
       setLoading(false);
     };
     fetch();
