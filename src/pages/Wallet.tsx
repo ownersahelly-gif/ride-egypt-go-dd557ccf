@@ -76,7 +76,10 @@ const Wallet = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div
+      className="min-h-screen bg-background"
+      style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 6rem)' }}
+    >
       {/* Header */}
       <div className="bg-primary text-primary-foreground px-4 pt-12 pb-8">
         <div className="flex items-center gap-3 mb-6">
